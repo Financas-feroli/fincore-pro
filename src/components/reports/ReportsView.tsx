@@ -23,8 +23,8 @@ export const ReportsView: React.FC = () => {
 
   // Calculate DRE
   const dre = useMemo(() => {
-    return calculateDRE(transactions, categories, selectedMonth, regime);
-  }, [transactions, categories, selectedMonth, regime]);
+    return calculateDRE(transactions, categories, selectedMonth, regime, companyProfile.fiscalRegime);
+  }, [transactions, categories, selectedMonth, regime, companyProfile.fiscalRegime]);
 
   // Cash Flow Forecast vs Actual for selected month
   const cashFlowComparison = useMemo(() => {
@@ -47,10 +47,15 @@ export const ReportsView: React.FC = () => {
       }
     });
 
-    const totalInflowForecast = realizedInflow + expectedInflow;
-    const totalOutflowForecast = realizedOutflow + expectedOutflow;
-    const netForecast = totalInflowForecast - totalOutflowForecast;
-    const netRealized = realizedInflow - realizedOutflow;
+    realizedInflow = Math.round(realizedInflow * 100) / 100;
+    expectedInflow = Math.round(expectedInflow * 100) / 100;
+    realizedOutflow = Math.round(realizedOutflow * 100) / 100;
+    expectedOutflow = Math.round(expectedOutflow * 100) / 100;
+
+    const totalInflowForecast = Math.round((realizedInflow + expectedInflow) * 100) / 100;
+    const totalOutflowForecast = Math.round((realizedOutflow + expectedOutflow) * 100) / 100;
+    const netForecast = Math.round((totalInflowForecast - totalOutflowForecast) * 100) / 100;
+    const netRealized = Math.round((realizedInflow - realizedOutflow) * 100) / 100;
 
     return {
       realizedInflow,

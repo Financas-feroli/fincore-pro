@@ -47,6 +47,7 @@ export const DashboardView: React.FC = () => {
     categories,
     openQuickEntry,
     openSettlementModal,
+    companyProfile,
     setActiveTab,
     theme,
   } = useFinance();
@@ -54,26 +55,32 @@ export const DashboardView: React.FC = () => {
   const [hideBalances, setHideBalances] = useState(false);
 
   const currentMonthStr = new Date().toISOString().substring(0, 7);
-  const dre = calculateDRE(transactions, categories, currentMonthStr, 'competence');
+  const dre = calculateDRE(
+    transactions,
+    categories,
+    currentMonthStr,
+    'competence',
+    companyProfile.fiscalRegime
+  );
 
   // Managerial Health Metrics (Auditoria Gerencial)
   const managerialKPIs = useMemo(() => {
     const totalLiquidity = summary.totalBalance;
     const totalMonthPayables = summary.monthExpense + summary.expectedExpense;
-    
-    // 1. Immediate Liquidity Ratio
-    const liquidityRatio = totalMonthPayables > 0 ? totalLiquidity / totalMonthPayables : 99.9;
-    
-    // 2. Default / Overdue Receivables Rate
-    const totalReceivables = summary.overdueReceivables + summary.todayReceivables + summary.expectedIncome;
-    const overdueRate = totalReceivables > 0 ? (summary.overdueReceivables / totalReceivables) * 100 : 0;
-    
-    // 3. Cash Runway (Months of survival with current cash based on monthly expenses)
-    const avgMonthlyExpense = Math.max(1000, summary.monthExpense + summary.expectedExpense);
-    const runwayMonths = totalLiquidity > 0 ? totalLiquidity / avgMonthlyExpense : 0;
 
-    // 4. Operational Margin
-    const grossMargin = dre.grossRevenue > 0 ? (dre.grossProfit / dre.grossRevenue) * 100 : 0;
+    // 1. Immediate Liquidity Ratio (Capacidade de honrar compromissos imediatos)
+    const liquidityRatio = totalMonthPayables > 0 ? Number((totalLiquidity / totalMonthPayables).toFixed(2)) : 99.9;
+
+    // 2. Default / Overdue Receivables Rate (% de inadimplência sobre a carteira)
+    const totalReceivables = summary.overdueReceivables + summary.todayReceivables + summary.expectedIncome;
+    const overdueRate = totalReceivables > 0 ? Number(((summary.overdueReceivables / totalReceivables) * 100).toFixed(1)) : 0;
+
+    // 3. Cash Runway (Meses de sobrevivência com o caixa atual)
+    const avgMonthlyExpense = Math.max(1000, summary.monthExpense + summary.expectedExpense);
+    const runwayMonths = totalLiquidity > 0 ? Number((totalLiquidity / avgMonthlyExpense).toFixed(1)) : 0;
+
+    // 4. Operational Margin (Margem Bruta)
+    const grossMargin = dre.grossRevenue > 0 ? Number(((dre.grossProfit / dre.grossRevenue) * 100).toFixed(1)) : 0;
 
     return {
       liquidityRatio,
@@ -88,16 +95,17 @@ export const DashboardView: React.FC = () => {
   const catMap = new Map(categories.map((c) => [c.id, c]));
 
   transactions.forEach((txn) => {
+    const effectiveDate = (txn.paymentDate || txn.dueDate || '').split('T')[0];
     if (
       txn.type === 'expense' &&
       txn.status === 'paid' &&
-      txn.dueDate.startsWith(currentMonthStr)
+      effectiveDate.startsWith(currentMonthStr)
     ) {
       const cat = catMap.get(txn.categoryId);
       const name = cat?.name || 'Outras';
       const color = cat?.color || '#94a3b8';
       const current = expenseByCategoryMap.get(txn.categoryId) || { name, value: 0, color };
-      current.value += txn.amount;
+      current.value = Math.round((current.value + txn.amount) * 100) / 100;
       expenseByCategoryMap.set(txn.categoryId, current);
     }
   });

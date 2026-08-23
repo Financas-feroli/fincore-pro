@@ -1,6 +1,10 @@
 import { BankAccount, CashFlowPoint, FinancialSummary, Transaction } from '../types';
 import { getTodayDateString } from './formatters';
 
+function round2(val: number): number {
+  return Math.round((val + Number.EPSILON) * 100) / 100;
+}
+
 export function calculateCashFlowAndSummary(
   transactions: Transaction[],
   accounts: BankAccount[],
@@ -16,6 +20,7 @@ export function calculateCashFlowAndSummary(
       totalBalance += acc.currentBalance;
     }
   });
+  totalBalance = round2(totalBalance);
 
   // 2. Month realization (Paid/Received in current month)
   let monthIncome = 0;
@@ -32,25 +37,26 @@ export function calculateCashFlowAndSummary(
   transactions.forEach((txn) => {
     if (txn.status === 'cancelled' || txn.type === 'transfer') return;
 
+    const amount = Number(txn.amount) || 0;
     const cleanDue = (txn.dueDate || '').split('T')[0];
     const isOverdue = txn.status === 'pending' && cleanDue < today;
     const isToday = cleanDue === today && txn.status === 'pending';
 
     if (txn.type === 'expense') {
       if (isOverdue) {
-        overduePayables += txn.amount;
+        overduePayables += amount;
         overduePayablesCount++;
       }
       if (isToday) {
-        todayPayables += txn.amount;
+        todayPayables += amount;
       }
     } else if (txn.type === 'income') {
       if (isOverdue) {
-        overdueReceivables += txn.amount;
+        overdueReceivables += amount;
         overdueReceivablesCount++;
       }
       if (isToday) {
-        todayReceivables += txn.amount;
+        todayReceivables += amount;
       }
     }
 
@@ -58,18 +64,26 @@ export function calculateCashFlowAndSummary(
     const effectiveDate = (txn.paymentDate || cleanDue).split('T')[0];
     if (effectiveDate.startsWith(currentMonthPrefix)) {
       if (txn.status === 'paid') {
-        if (txn.type === 'income') monthIncome += txn.amount;
-        if (txn.type === 'expense') monthExpense += txn.amount;
+        if (txn.type === 'income') monthIncome += amount;
+        if (txn.type === 'expense') monthExpense += amount;
       } else if (txn.status === 'pending') {
-        if (txn.type === 'income') expectedIncome += txn.amount;
-        if (txn.type === 'expense') expectedExpense += txn.amount;
+        if (txn.type === 'income') expectedIncome += amount;
+        if (txn.type === 'expense') expectedExpense += amount;
       }
     }
   });
 
-  const monthNet = monthIncome - monthExpense;
+  monthIncome = round2(monthIncome);
+  monthExpense = round2(monthExpense);
+  expectedIncome = round2(expectedIncome);
+  expectedExpense = round2(expectedExpense);
+  overduePayables = round2(overduePayables);
+  overdueReceivables = round2(overdueReceivables);
+  todayPayables = round2(todayPayables);
+  todayReceivables = round2(todayReceivables);
+  const monthNet = round2(monthIncome - monthExpense);
 
-  // 3. Generate 30-Day Daily Cash Flow (15 days past, today, 15 days future)
+  // 3. Generate 30-Day Daily Cash Flow (14 days past, today, 15 days future)
   const cashFlow30Days: CashFlowPoint[] = [];
   const baseDate = new Date();
   baseDate.setDate(baseDate.getDate() - 14); // start 14 days ago
@@ -88,35 +102,45 @@ export function calculateCashFlowAndSummary(
   // Populate daily inflows and outflows (excluding transfers)
   transactions.forEach((txn) => {
     if (txn.status === 'cancelled' || txn.type === 'transfer') return;
+    const amount = Number(txn.amount) || 0;
+    
+    // For past dates: only PAID transactions matter
+    // For future dates: PENDING and PAID transactions matter
     const targetDate = (txn.status === 'paid' && txn.paymentDate ? txn.paymentDate : txn.dueDate).split('T')[0];
     const entry = dailyMap.get(targetDate);
+    
     if (entry) {
+      if (targetDate <= today && txn.status !== 'paid') {
+        // Pending past transactions do not affect historical bank balance directly
+        return;
+      }
       if (txn.type === 'income') {
-        entry.income += txn.amount;
+        entry.income += amount;
       } else if (txn.type === 'expense') {
-        entry.expense += txn.amount;
+        entry.expense += amount;
       }
     }
   });
 
-  // Calculate past nets sum between Day 0 and Today to project the exact starting balance
-  let pastNetsSum = 0;
+  // Calculate past realized sum up to today to establish the accurate starting curve
+  let pastPaidSum = 0;
   dateList.forEach((dStr) => {
     if (dStr <= today) {
       const entry = dailyMap.get(dStr)!;
-      pastNetsSum += entry.income - entry.expense;
+      pastPaidSum += entry.income - entry.expense;
     }
   });
 
-  // Starting balance at Day 0 such that when stepping forward, today's balance equals totalBalance exactly
-  let runningSimulatedBalance = totalBalance - pastNetsSum;
+  let runningSimulatedBalance = round2(totalBalance - pastPaidSum);
 
   dateList.forEach((dateStr) => {
     const values = dailyMap.get(dateStr)!;
     const isProjected = dateStr > today;
-    const net = values.income - values.expense;
+    const income = round2(values.income);
+    const expense = round2(values.expense);
+    const net = round2(income - expense);
 
-    runningSimulatedBalance += net;
+    runningSimulatedBalance = round2(runningSimulatedBalance + net);
 
     const [, month, day] = dateStr.split('-');
     const dayLabel = `${day}/${month}`;
@@ -124,8 +148,8 @@ export function calculateCashFlowAndSummary(
     cashFlow30Days.push({
       date: dateStr,
       dayLabel,
-      income: values.income,
-      expense: values.expense,
+      income,
+      expense,
       net,
       accumulatedBalance: runningSimulatedBalance,
       isProjected,

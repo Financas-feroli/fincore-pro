@@ -7,15 +7,15 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Robustly parses Brazilian currency strings like "1.250,50", "1250,50", "1250.50"
+ * Robustly parses Brazilian currency strings like "1.250,50", "1250,50", "1250.50", "R$ 1.250,50"
  */
 export function parseBRL(value: string | number | undefined | null): number {
   if (value === undefined || value === null) return 0;
-  if (typeof value === 'number') return isNaN(value) ? 0 : value;
-  
-  const clean = value.toString().trim();
+  if (typeof value === 'number') return isNaN(value) ? 0 : Number(value.toFixed(2));
+
+  const clean = value.toString().replace(/[R$\s]/g, '').trim();
   if (!clean) return 0;
-  
+
   // If formatted as "1.234,56" (contains both dot as thousand and comma as decimal)
   if (clean.includes(',') && clean.includes('.')) {
     return parseFloat(clean.replace(/\./g, '').replace(',', '.')) || 0;
@@ -86,15 +86,15 @@ export function getTodayDateString(): string {
 export function addMonthsClampDay(baseDateStr: string, monthsToAdd: number): string {
   const cleanDate = baseDateStr.split('T')[0];
   const [y, m, d] = cleanDate.split('-').map(Number);
-  
+
   const targetTotalMonth = m - 1 + monthsToAdd;
   const targetYear = y + Math.floor(targetTotalMonth / 12);
   const normalizedMonth = ((targetTotalMonth % 12) + 12) % 12;
-  
+
   // Last day of target month: day 0 of month+1
   const maxDaysInTargetMonth = new Date(targetYear, normalizedMonth + 1, 0).getDate();
   const clampedDay = Math.min(d, maxDaysInTargetMonth);
-  
+
   const mStr = String(normalizedMonth + 1).padStart(2, '0');
   const dStr = String(clampedDay).padStart(2, '0');
   return `${targetYear}-${mStr}-${dStr}`;
@@ -124,6 +124,56 @@ export function formatPhone(phone: string | undefined | null): string {
   return phone;
 }
 
+/**
+ * Official Modulo 11 CPF Checksum Validation (Receita Federal)
+ */
+export function isValidCPF(cpf: string | undefined | null): boolean {
+  if (!cpf) return false;
+  const clean = cpf.replace(/\D/g, '');
+  if (clean.length !== 11 || /^(\d)\1{10}$/.test(clean)) return false;
+
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(clean.charAt(i)) * (10 - i);
+  }
+  let check1 = 11 - (sum % 11);
+  if (check1 >= 10) check1 = 0;
+  if (check1 !== parseInt(clean.charAt(9))) return false;
+
+  sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(clean.charAt(i)) * (11 - i);
+  }
+  let check2 = 11 - (sum % 11);
+  if (check2 >= 10) check2 = 0;
+  return check2 === parseInt(clean.charAt(10));
+}
+
+/**
+ * Official Modulo 11 CNPJ Checksum Validation (Receita Federal)
+ */
+export function isValidCNPJ(cnpj: string | undefined | null): boolean {
+  if (!cnpj) return false;
+  const clean = cnpj.replace(/\D/g, '');
+  if (clean.length !== 14 || /^(\d)\1{13}$/.test(clean)) return false;
+
+  const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  let sum = 0;
+  for (let i = 0; i < 12; i++) {
+    sum += parseInt(clean.charAt(i)) * weights1[i];
+  }
+  let check1 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  if (check1 !== parseInt(clean.charAt(12))) return false;
+
+  const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  sum = 0;
+  for (let i = 0; i < 13; i++) {
+    sum += parseInt(clean.charAt(i)) * weights2[i];
+  }
+  let check2 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  return check2 === parseInt(clean.charAt(13));
+}
+
 export function getStatusBadge(status: TransactionStatus, dueDate: string): {
   label: string;
   className: string;
@@ -137,7 +187,7 @@ export function getStatusBadge(status: TransactionStatus, dueDate: string): {
   if (status === 'paid') {
     return {
       label: 'Pago/Recebido',
-      className: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60',
+      className: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60 font-semibold',
       bgClass: 'bg-emerald-500',
       textClass: 'text-emerald-500',
     };
@@ -146,7 +196,7 @@ export function getStatusBadge(status: TransactionStatus, dueDate: string): {
   if (isOverdue) {
     return {
       label: 'Vencido',
-      className: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60',
+      className: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60 font-semibold',
       bgClass: 'bg-rose-500',
       textClass: 'text-rose-500',
     };
@@ -156,14 +206,14 @@ export function getStatusBadge(status: TransactionStatus, dueDate: string): {
     if (cleanDue === today) {
       return {
         label: 'Vence Hoje',
-        className: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60',
+        className: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 font-semibold',
         bgClass: 'bg-amber-500',
         textClass: 'text-amber-500',
       };
     }
     return {
       label: 'Pendente',
-      className: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60',
+      className: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60 font-semibold',
       bgClass: 'bg-blue-500',
       textClass: 'text-blue-500',
     };
@@ -172,7 +222,7 @@ export function getStatusBadge(status: TransactionStatus, dueDate: string): {
   if (status === 'scheduled') {
     return {
       label: 'Agendado',
-      className: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800/60',
+      className: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800/60 font-semibold',
       bgClass: 'bg-purple-500',
       textClass: 'text-purple-500',
     };
@@ -180,7 +230,7 @@ export function getStatusBadge(status: TransactionStatus, dueDate: string): {
 
   return {
     label: 'Cancelado',
-    className: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700',
+    className: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 font-semibold',
     bgClass: 'bg-slate-400',
     textClass: 'text-slate-400',
   };

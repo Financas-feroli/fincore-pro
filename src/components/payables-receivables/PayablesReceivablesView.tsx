@@ -103,10 +103,10 @@ export const PayablesReceivablesView: React.FC = () => {
       };
     }, [pendingTransactions, today]);
 
-  // Summary Totals
-  const totalOverdue = overdueItems.reduce((acc, t) => acc + t.amount, 0);
-  const totalToday = todayItems.reduce((acc, t) => acc + t.amount, 0);
-  const totalPending = pendingTransactions.reduce((acc, t) => acc + t.amount, 0);
+  // Summary Totals with exact cent precision
+  const totalOverdue = Math.round(overdueItems.reduce((acc, t) => acc + t.amount, 0) * 100) / 100;
+  const totalToday = Math.round(todayItems.reduce((acc, t) => acc + t.amount, 0) * 100) / 100;
+  const totalPending = Math.round(pendingTransactions.reduce((acc, t) => acc + t.amount, 0) * 100) / 100;
 
   const renderSection = (
     title: string,
@@ -116,7 +116,7 @@ export const PayablesReceivablesView: React.FC = () => {
     description: string
   ) => {
     const Icon = icon;
-    const sectionTotal = items.reduce((acc, t) => acc + t.amount, 0);
+    const sectionTotal = Math.round(items.reduce((acc, t) => acc + t.amount, 0) * 100) / 100;
 
     return (
       <div className="p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-3">
