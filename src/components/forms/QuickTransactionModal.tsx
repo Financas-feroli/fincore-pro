@@ -661,55 +661,37 @@ export const QuickTransactionModal: React.FC = () => {
                     {isInstallment && (
                       <div className="p-4 bg-slate-100/80 dark:bg-[#161f30] rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-3">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3">
                             <label className="text-xs font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">
                               Número de Parcelas:
                             </label>
-                            <div className="flex items-center">
+                            <div className="flex items-center gap-2">
                               <input
                                 type="number"
                                 min="2"
                                 max="360"
+                                step="1"
                                 value={installmentsCount || ''}
                                 onChange={(e) => {
                                   const val = e.target.value === '' ? 2 : Math.max(2, Math.min(360, Number(e.target.value)));
                                   setInstallmentsCount(val);
                                 }}
-                                className="w-20 px-3 py-1.5 text-xs font-bold font-mono text-center text-slate-900 dark:text-white bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:border-emerald-500"
-                                placeholder="Ex: 80"
+                                className="w-24 px-3 py-2 text-sm font-bold font-mono text-center text-slate-900 dark:text-white bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm"
+                                placeholder="2"
                               />
-                              <span className="ml-1.5 text-xs font-bold text-slate-400">vezes</span>
+                              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">vezes</span>
                             </div>
                           </div>
 
-                          <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                            {installmentsCount}x de {formatCurrency(numAmount > 0 && installmentsCount > 0 ? numAmount / installmentsCount : 0)}
+                          <div className="px-3.5 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                            <span>{installmentsCount}x de</span>
+                            <span className="text-sm font-extrabold">{formatCurrency(numAmount > 0 && installmentsCount > 0 ? numAmount / installmentsCount : 0)}</span>
                           </div>
                         </div>
 
-                        {/* Quick Preset Buttons */}
-                        <div className="space-y-1">
-                          <span className="text-[10px] uppercase font-bold text-slate-400">Atalhos rápidos de parcelamento:</span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {[2, 3, 4, 6, 10, 12, 18, 24, 36, 48, 60, 72, 80, 96, 120, 240, 360].map((n) => (
-                              <button
-                                key={n}
-                                type="button"
-                                onClick={() => setInstallmentsCount(n)}
-                                className={`px-2 py-1 text-[11px] font-mono font-bold rounded-md transition-all ${
-                                  installmentsCount === n
-                                    ? 'bg-emerald-600 text-white shadow-sm'
-                                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
-                                }`}
-                              >
-                                {n}x
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <p className="text-[11px] text-slate-400">
-                          💡 O valor total de <strong>{formatCurrency(numAmount)}</strong> será distribuído em <strong>{installmentsCount} parcelas mensais</strong> com vencimentos sucessivos iniciando em {formatDate(dueDate)}.
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 pt-1 border-t border-slate-200/50 dark:border-slate-800/60">
+                          <span>💡</span>
+                          <span>O valor total de <strong>{formatCurrency(numAmount)}</strong> será dividido em <strong>{installmentsCount} parcelas mensais</strong> com vencimentos iniciando em {formatDate(dueDate)}.</span>
                         </p>
                       </div>
                     )}
@@ -724,7 +706,7 @@ export const QuickTransactionModal: React.FC = () => {
                             <select
                               value={recurrenceFreq}
                               onChange={(e) => setRecurrenceFreq(e.target.value as RecurrenceFrequency)}
-                              className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-bold text-slate-800 dark:text-slate-100"
+                              className="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-emerald-500 shadow-sm"
                             >
                               <option value="daily">Diário (Todos os dias)</option>
                               <option value="weekly">Semanal (A cada 7 dias)</option>
@@ -746,42 +728,23 @@ export const QuickTransactionModal: React.FC = () => {
                                 type="number"
                                 min="1"
                                 max="360"
+                                step="1"
                                 value={recurrenceMonths || ''}
                                 onChange={(e) => {
                                   const val = e.target.value === '' ? 1 : Math.max(1, Math.min(360, Number(e.target.value)));
                                   setRecurrenceMonths(val);
                                 }}
-                                className="w-20 px-3 py-2 text-xs font-bold font-mono text-center text-slate-900 dark:text-white bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:border-emerald-500"
-                                placeholder="Ex: 80"
+                                className="w-24 px-3 py-2 text-sm font-bold font-mono text-center text-slate-900 dark:text-white bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm"
+                                placeholder="12"
                               />
-                              <span className="text-xs font-bold text-slate-400">ocorrências</span>
+                              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">ocorrências</span>
                             </div>
                           </div>
                         </div>
 
-                        {/* Quick Preset Buttons for Repetitions */}
-                        <div className="space-y-1">
-                          <span className="text-[10px] uppercase font-bold text-slate-400">Atalhos rápidos de duração:</span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {[3, 6, 12, 24, 36, 60, 72, 80, 96, 120, 240, 360].map((n) => (
-                              <button
-                                key={n}
-                                type="button"
-                                onClick={() => setRecurrenceMonths(n)}
-                                className={`px-2 py-1 text-[11px] font-mono font-bold rounded-md transition-all ${
-                                  recurrenceMonths === n
-                                    ? 'bg-blue-600 text-white shadow-sm'
-                                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
-                                }`}
-                              >
-                                {n} repetições
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <p className="text-[11px] text-slate-400">
-                          🔁 Serão gerados automaticamente <strong>{recurrenceMonths} lançamentos</strong> de <strong>{formatCurrency(numAmount)}</strong> cada, no intervalo programado a partir de {formatDate(dueDate)}.
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 pt-1 border-t border-slate-200/50 dark:border-slate-800/60">
+                          <span>🔁</span>
+                          <span>Serão gerados automaticamente <strong>{recurrenceMonths} lançamentos</strong> de <strong>{formatCurrency(numAmount)}</strong> cada a partir de {formatDate(dueDate)}.</span>
                         </p>
                       </div>
                     )}
