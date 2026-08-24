@@ -73,7 +73,7 @@ export const SettlementModal: React.FC = () => {
       onClose={closeSettlementModal}
       title={isIncome ? 'Confirmar Recebimento' : 'Confirmar Pagamento'}
       subtitle={`Liquidação de lançamento: ${settlementTransaction.description}`}
-      maxWidth="md"
+      maxWidth="xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Value Hero Banner */}
@@ -95,75 +95,86 @@ export const SettlementModal: React.FC = () => {
           </span>
         </div>
 
-        {/* Payment Account */}
-        <div className="space-y-1.5">
-          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-            {isIncome ? 'Conta de Destino (Crédito)' : 'Conta de Origem (Débito)'}
-          </label>
-          <select
-            value={accountId}
-            onChange={(e) => setAccountId(e.target.value)}
-            required
-            className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl focus:outline-none focus:border-emerald-500"
-          >
-            {accounts.map((acc) => (
-              <option key={acc.id} value={acc.id}>
-                {acc.name} — Saldo: {formatCurrency(acc.currentBalance)}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Payment Account and Date in 2 columns */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <div className="h-5 flex items-center">
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                {isIncome ? 'Conta de Destino (Crédito)' : 'Conta de Origem (Débito)'}
+              </label>
+            </div>
+            <select
+              value={accountId}
+              onChange={(e) => setAccountId(e.target.value)}
+              required
+              className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl focus:outline-none focus:border-emerald-500"
+            >
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.name} — Saldo: {formatCurrency(acc.currentBalance)}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {/* Date of Payment */}
-        <div className="space-y-1.5">
-          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-            {isIncome ? 'Data do Recebimento Efetivo' : 'Data do Pagamento Efetivo'}
-          </label>
-          <input
-            type="date"
-            value={paymentDate}
-            onChange={(e) => setPaymentDate(e.target.value)}
-            required
-            className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl focus:outline-none focus:border-emerald-500 font-mono"
-          />
+          <div className="space-y-1.5">
+            <div className="h-5 flex items-center">
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                {isIncome ? 'Data do Recebimento Efetivo' : 'Data do Pagamento Efetivo'}
+              </label>
+            </div>
+            <input
+              type="date"
+              value={paymentDate}
+              onChange={(e) => setPaymentDate(e.target.value)}
+              required
+              className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl focus:outline-none focus:border-emerald-500 font-mono"
+            />
+          </div>
         </div>
 
         {/* Interest, Fine, Discount Grid */}
-        <div className="grid grid-cols-3 gap-3 pt-2">
-          <div className="space-y-1">
-            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              (+) Juros (R$)
-            </label>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+          <div className="space-y-1.5">
+            <div className="h-5 flex items-center">
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                (+) Juros (R$)
+              </label>
+            </div>
             <input
               type="text"
               value={interestInput}
               onChange={(e) => setInterestInput(e.target.value.replace(/[^0-9.,]/g, ''))}
               placeholder="0,00"
-              className="w-full px-2.5 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl font-mono placeholder:font-normal placeholder:text-slate-500"
+              className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl font-mono placeholder:font-normal placeholder:text-slate-500"
             />
           </div>
-          <div className="space-y-1">
-            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              (+) Multa (R$)
-            </label>
+          <div className="space-y-1.5">
+            <div className="h-5 flex items-center">
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                (+) Multa (R$)
+              </label>
+            </div>
             <input
               type="text"
               value={fineInput}
               onChange={(e) => setFineInput(e.target.value.replace(/[^0-9.,]/g, ''))}
               placeholder="0,00"
-              className="w-full px-2.5 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl font-mono placeholder:font-normal placeholder:text-slate-500"
+              className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl font-mono placeholder:font-normal placeholder:text-slate-500"
             />
           </div>
-          <div className="space-y-1">
-            <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              (-) Desconto (R$)
-            </label>
+          <div className="space-y-1.5">
+            <div className="h-5 flex items-center">
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                (-) Desconto (R$)
+              </label>
+            </div>
             <input
               type="text"
               value={discountInput}
               onChange={(e) => setDiscountInput(e.target.value.replace(/[^0-9.,]/g, ''))}
               placeholder="0,00"
-              className="w-full px-2.5 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl font-mono placeholder:font-normal placeholder:text-slate-500"
+              className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl font-mono placeholder:font-normal placeholder:text-slate-500"
             />
           </div>
         </div>

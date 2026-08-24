@@ -368,7 +368,7 @@ export const ContactsView: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         title={editingContactId ? 'Editar Contato' : 'Novo Cliente ou Fornecedor'}
         subtitle="Cadastro completo para emissão de notas e lançamentos"
-        maxWidth="lg"
+        maxWidth="xl"
       >
         <form onSubmit={handleSaveContact} className="space-y-4">
           <div className="grid grid-cols-3 gap-2 p-1 bg-slate-100 dark:bg-[#161f30] rounded-xl border border-slate-200 dark:border-slate-800">
@@ -407,11 +407,13 @@ export const ContactsView: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                Razão Social / Nome Completo *
-              </label>
+              <div className="h-5 flex items-center">
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Razão Social / Nome Completo *
+                </label>
+              </div>
               <input
                 type="text"
                 required
@@ -422,9 +424,11 @@ export const ContactsView: React.FC = () => {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                Nome Fantasia
-              </label>
+              <div className="h-5 flex items-center">
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Nome Fantasia
+                </label>
+              </div>
               <input
                 type="text"
                 placeholder="Ex: Exemplo Tech"
@@ -435,15 +439,15 @@ export const ContactsView: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
+              <div className="h-5 flex items-center justify-between gap-1">
                 <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                   CNPJ ou CPF *
                 </label>
                 {document.replace(/\D/g, '').length >= 11 && (
                   <span
-                    className={`text-[10px] font-bold ${
+                    className={`text-[10px] font-bold whitespace-nowrap ${
                       isValidCPF(document) || isValidCNPJ(document)
                         ? 'text-emerald-500'
                         : 'text-rose-500'
@@ -469,9 +473,11 @@ export const ContactsView: React.FC = () => {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                Telefone
-              </label>
+              <div className="h-5 flex items-center">
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Telefone
+                </label>
+              </div>
               <input
                 type="text"
                 placeholder="(11) 99999-9999"
@@ -481,9 +487,11 @@ export const ContactsView: React.FC = () => {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                Chave PIX
-              </label>
+              <div className="h-5 flex items-center">
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Chave PIX
+                </label>
+              </div>
               <input
                 type="text"
                 placeholder="Chave PIX..."
@@ -494,11 +502,13 @@ export const ContactsView: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2 space-y-1.5">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                E-mail Financeiro
-              </label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2 space-y-1.5">
+              <div className="h-5 flex items-center">
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  E-mail Financeiro
+                </label>
+              </div>
               <input
                 type="email"
                 placeholder="financeiro@empresa.com.br"
@@ -508,9 +518,11 @@ export const ContactsView: React.FC = () => {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                Limite de Crédito (R$)
-              </label>
+              <div className="h-5 flex items-center">
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Limite de Crédito (R$)
+                </label>
+              </div>
               <input
                 type="text"
                 placeholder="50000"
@@ -522,9 +534,11 @@ export const ContactsView: React.FC = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              Endereço Completo
-            </label>
+            <div className="h-5 flex items-center">
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Endereço Completo
+              </label>
+            </div>
             <input
               type="text"
               placeholder="Rua, Número, Bairro, Cidade - UF"

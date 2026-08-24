@@ -489,14 +489,16 @@ export const BankingView: React.FC = () => {
         isOpen={isAccountModalOpen}
         onClose={() => setIsAccountModalOpen(false)}
         title={editingAccountId ? 'Editar Conta Bancária' : 'Nova Conta Bancária ou Cartão'}
-        subtitle="Configure detalhes da instituição financeira e saldos"
-        maxWidth="md"
+        subtitle="Configure detalhes da instituição financeira, agência e saldos"
+        maxWidth="xl"
       >
         <form onSubmit={handleSaveAccount} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              Nome de Identificação da Conta
-            </label>
+            <div className="h-5 flex items-center">
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Nome de Identificação da Conta
+              </label>
+            </div>
             <input
               type="text"
               placeholder="Ex: Itaú PJ Principal, Nubank Reserva..."
@@ -507,11 +509,13 @@ export const BankingView: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                Instituição / Banco
-              </label>
+              <div className="h-5 flex items-center">
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Instituição / Banco
+                </label>
+              </div>
               <select
                 value={accBankName}
                 onChange={(e) => setAccBankName(e.target.value)}
@@ -532,9 +536,11 @@ export const BankingView: React.FC = () => {
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                Tipo de Conta
-              </label>
+              <div className="h-5 flex items-center">
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Tipo de Conta
+                </label>
+              </div>
               <select
                 value={accType}
                 onChange={(e) => setAccType(e.target.value as BankAccount['type'])}
@@ -550,51 +556,59 @@ export const BankingView: React.FC = () => {
           </div>
 
           {accType === 'credit_card' ? (
-            <div className="grid grid-cols-3 gap-3 p-3 bg-slate-100/60 dark:bg-[#161f30] rounded-xl border border-slate-200 dark:border-slate-700/70">
-              <div className="space-y-1">
-                <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Limite Total (R$)
-                </label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-3.5 bg-slate-100/60 dark:bg-[#161f30] rounded-xl border border-slate-200 dark:border-slate-700/70">
+              <div className="space-y-1.5">
+                <div className="h-5 flex items-center">
+                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Limite Total (R$)
+                  </label>
+                </div>
                 <input
                   type="text"
                   value={accCreditLimit}
                   onChange={(e) => setAccCreditLimit(e.target.value)}
-                  className="w-full px-2.5 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono"
+                  className="w-full px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Dia Fechamento
-                </label>
+              <div className="space-y-1.5">
+                <div className="h-5 flex items-center">
+                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Dia Fechamento
+                  </label>
+                </div>
                 <input
                   type="number"
                   min="1"
                   max="31"
                   value={accClosingDay}
                   onChange={(e) => setAccClosingDay(Number(e.target.value))}
-                  className="w-full px-2.5 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono"
+                  className="w-full px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Dia Vencimento
-                </label>
+              <div className="space-y-1.5">
+                <div className="h-5 flex items-center">
+                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Dia Vencimento
+                  </label>
+                </div>
                 <input
                   type="number"
                   min="1"
                   max="31"
                   value={accDueDay}
                   onChange={(e) => setAccDueDay(Number(e.target.value))}
-                  className="w-full px-2.5 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono"
+                  className="w-full px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono"
                 />
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Agência
-                </label>
+                <div className="h-5 flex items-center">
+                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Agência
+                  </label>
+                </div>
                 <input
                   type="text"
                   placeholder="0001"
@@ -604,9 +618,11 @@ export const BankingView: React.FC = () => {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Conta Corrente
-                </label>
+                <div className="h-5 flex items-center">
+                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Conta Corrente
+                  </label>
+                </div>
                 <input
                   type="text"
                   placeholder="12345-6"
@@ -616,15 +632,15 @@ export const BankingView: React.FC = () => {
                 />
               </div>
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                <div className="h-5 flex items-center justify-between gap-2">
+                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider truncate">
                     {editingAccountId ? 'Saldo da Conta (R$)' : 'Saldo Inicial (R$)'}
                   </label>
                   {editingAccountId && (
                     <button
                       type="button"
                       onClick={() => setAccInitialBalance('0')}
-                      className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
+                      className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline whitespace-nowrap"
                     >
                       Zerar (R$ 0,00)
                     </button>
@@ -687,13 +703,15 @@ export const BankingView: React.FC = () => {
         onClose={() => setIsTransferModalOpen(false)}
         title="Transferência entre Contas"
         subtitle="Movimentação financeira interna entre contas da empresa"
-        maxWidth="md"
+        maxWidth="xl"
       >
         <form onSubmit={handleTransferSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              Valor da Transferência (R$)
-            </label>
+            <div className="h-5 flex items-center">
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Valor da Transferência (R$)
+              </label>
+            </div>
             <input
               type="text"
               placeholder="0,00"
@@ -705,11 +723,13 @@ export const BankingView: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                De (Origem)
-              </label>
+              <div className="h-5 flex items-center">
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  De (Origem)
+                </label>
+              </div>
               <select
                 value={transferFrom}
                 onChange={(e) => setTransferFrom(e.target.value)}
@@ -723,9 +743,11 @@ export const BankingView: React.FC = () => {
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                Para (Destino)
-              </label>
+              <div className="h-5 flex items-center">
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Para (Destino)
+                </label>
+              </div>
               <select
                 value={transferTo}
                 onChange={(e) => setTransferTo(e.target.value)}
@@ -740,29 +762,35 @@ export const BankingView: React.FC = () => {
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              Data da Transferência
-            </label>
-            <input
-              type="date"
-              value={transferDate}
-              onChange={(e) => setTransferDate(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl font-mono"
-            />
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <div className="h-5 flex items-center">
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Data da Transferência
+                </label>
+              </div>
+              <input
+                type="date"
+                value={transferDate}
+                onChange={(e) => setTransferDate(e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl font-mono"
+              />
+            </div>
 
-          <div className="space-y-1.5">
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              Descrição / Motivo
-            </label>
-            <input
-              type="text"
-              placeholder="Ex: Aplicação em reserva de contingência"
-              value={transferDesc}
-              onChange={(e) => setTransferDesc(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl placeholder:font-normal placeholder:text-slate-500"
-            />
+            <div className="space-y-1.5">
+              <div className="h-5 flex items-center">
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Descrição / Motivo
+                </label>
+              </div>
+              <input
+                type="text"
+                placeholder="Ex: Reserva de contingência"
+                value={transferDesc}
+                onChange={(e) => setTransferDesc(e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl placeholder:font-normal placeholder:text-slate-500"
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
