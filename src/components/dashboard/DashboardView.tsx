@@ -10,6 +10,7 @@ import {
   ArrowDownRight,
   Calendar,
   CheckCircle2,
+  Edit2,
   PieChart as PieIcon,
   ChevronRight,
   Sparkles,
@@ -45,9 +46,10 @@ export const DashboardView: React.FC = () => {
     accounts,
     transactions,
     categories,
-    openQuickEntry,
-    openSettlementModal,
     companyProfile,
+    openQuickEntry,
+    openEditTransaction,
+    openSettlementModal,
     setActiveTab,
     theme,
   } = useFinance();
@@ -650,14 +652,21 @@ export const DashboardView: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <span
-                        className={`font-mono font-bold text-xs ${
+                        className={`font-mono font-bold text-xs mr-1 ${
                           isIncome ? 'text-emerald-500' : 'text-rose-500'
                         }`}
                       >
                         {maskValue(formatCurrency(txn.amount))}
                       </span>
+                      <button
+                        onClick={() => openEditTransaction(txn)}
+                        className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors"
+                        title="Editar Lançamento"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         onClick={() => openSettlementModal(txn)}
                         className="px-3 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors shadow-sm"

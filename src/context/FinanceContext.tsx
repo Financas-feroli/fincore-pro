@@ -55,6 +55,9 @@ interface FinanceContextType {
   setIsQuickEntryOpen: (open: boolean) => void;
   quickEntryType: 'income' | 'expense' | 'transfer';
   openQuickEntry: (type?: 'income' | 'expense' | 'transfer') => void;
+  editingTransaction: Transaction | null;
+  openEditTransaction: (txn: Transaction) => void;
+  closeQuickEntry: () => void;
   
   // Settlement Modal
   isSettlementModalOpen: boolean;
@@ -152,6 +155,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [isQuickEntryOpen, setIsQuickEntryOpen] = useState(false);
   const [quickEntryType, setQuickEntryType] = useState<'income' | 'expense' | 'transfer'>('expense');
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
   const [settlementTransaction, setSettlementTransaction] = useState<Transaction | null>(null);
@@ -240,10 +244,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     storageService.saveCompany(newComp);
   };
 
-  // Quick Entry Open
+  // Quick Entry & Edit Transaction Handlers
   const openQuickEntry = (type: 'income' | 'expense' | 'transfer' = 'expense') => {
+    setEditingTransaction(null);
     setQuickEntryType(type);
     setIsQuickEntryOpen(true);
+  };
+
+  const openEditTransaction = (txn: Transaction) => {
+    setEditingTransaction(txn);
+    setQuickEntryType(txn.type);
+    setIsQuickEntryOpen(true);
+  };
+
+  const closeQuickEntry = () => {
+    setEditingTransaction(null);
+    setIsQuickEntryOpen(false);
   };
 
   // Settlement Modal Helpers
@@ -839,6 +855,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsQuickEntryOpen,
         quickEntryType,
         openQuickEntry,
+        editingTransaction,
+        openEditTransaction,
+        closeQuickEntry,
         isSettlementModalOpen,
         settlementTransaction,
         openSettlementModal,

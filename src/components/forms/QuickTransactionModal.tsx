@@ -22,6 +22,9 @@ export const QuickTransactionModal: React.FC = () => {
     isQuickEntryOpen,
     setIsQuickEntryOpen,
     quickEntryType,
+    editingTransaction,
+    updateTransaction,
+    closeQuickEntry,
     accounts,
     categories,
     costCenters,
@@ -65,33 +68,59 @@ export const QuickTransactionModal: React.FC = () => {
   const [isCreatingContact, setIsCreatingContact] = useState(false);
   const [newContactName, setNewContactName] = useState('');
 
-  // Reset defaults on modal open
+  // Reset or Populate on modal open / edit
   useEffect(() => {
     if (isQuickEntryOpen) {
-      setType(quickEntryType);
-      const defaultAcc = accounts[0]?.id || '';
-      setAccountId(defaultAcc);
-      setTargetAccountId(accounts[1]?.id || defaultAcc);
+      if (editingTransaction) {
+        // PREFILL ALL FIELDS FOR EDITING
+        setType(editingTransaction.type);
+        setDescription(editingTransaction.description || '');
+        setAmount(editingTransaction.amount ? editingTransaction.amount.toString() : '');
+        setCategoryId(editingTransaction.categoryId || '');
+        setAccountId(editingTransaction.accountId || '');
+        setTargetAccountId(editingTransaction.targetAccountId || '');
+        setContactId(editingTransaction.contactId || '');
+        setCostCenterId(editingTransaction.costCenterId || '');
+        setDueDate(editingTransaction.dueDate || getTodayDateString());
+        setPaymentDate(editingTransaction.paymentDate || editingTransaction.dueDate || getTodayDateString());
+        setCompetenceDate(editingTransaction.competenceDate || getTodayDateString().substring(0, 7) + '-01');
+        setStatus(editingTransaction.status || 'paid');
+        setPaymentMethod(editingTransaction.paymentMethod || 'pix');
+        setDocumentNumber(editingTransaction.documentNumber || '');
+        setNotes(editingTransaction.notes || '');
+        setTagsInput((editingTransaction.tags || []).join(', '));
+        setAttachments(editingTransaction.attachments || []);
+        setIsInstallment(false);
+        setIsRecurrent(false);
+        setShowAdvanced(true);
+        setIsCreatingContact(false);
+      } else {
+        // DEFAULTS FOR NEW TRANSACTION
+        setType(quickEntryType);
+        const defaultAcc = accounts[0]?.id || '';
+        setAccountId(defaultAcc);
+        setTargetAccountId(accounts[1]?.id || defaultAcc);
 
-      const filteredCats = categories.filter((c) => c.type === (quickEntryType === 'income' ? 'income' : 'expense'));
-      setCategoryId(filteredCats[0]?.id || '');
-      setCostCenterId(costCenters[0]?.id || '');
-      setDueDate(getTodayDateString());
-      setPaymentDate(getTodayDateString());
-      setCompetenceDate(getTodayDateString().substring(0, 7) + '-01');
-      setStatus('paid');
-      setAmount('');
-      setDescription('');
-      setDocumentNumber('');
-      setNotes('');
-      setTagsInput('');
-      setIsInstallment(false);
-      setIsRecurrent(false);
-      setShowAdvanced(false);
-      setAttachments([]);
-      setIsCreatingContact(false);
+        const filteredCats = categories.filter((c) => c.type === (quickEntryType === 'income' ? 'income' : 'expense'));
+        setCategoryId(filteredCats[0]?.id || '');
+        setCostCenterId(costCenters[0]?.id || '');
+        setDueDate(getTodayDateString());
+        setPaymentDate(getTodayDateString());
+        setCompetenceDate(getTodayDateString().substring(0, 7) + '-01');
+        setStatus('paid');
+        setAmount('');
+        setDescription('');
+        setDocumentNumber('');
+        setNotes('');
+        setTagsInput('');
+        setIsInstallment(false);
+        setIsRecurrent(false);
+        setShowAdvanced(false);
+        setAttachments([]);
+        setIsCreatingContact(false);
+      }
     }
-  }, [isQuickEntryOpen, quickEntryType, accounts, categories, costCenters]);
+  }, [isQuickEntryOpen, editingTransaction, quickEntryType, accounts, categories, costCenters]);
 
   // Update categories when type changes
   useEffect(() => {
@@ -148,22 +177,55 @@ export const QuickTransactionModal: React.FC = () => {
       return;
     }
 
-    if (type === 'transfer') {
-      transferFunds(accountId, targetAccountId, numAmount, dueDate, description);
-      if (!keepOpen) setIsQuickEntryOpen(false);
-      else resetForm();
-      return;
-    }
-
-    if (!description.trim()) {
-      showToast('Erro de validação', 'Por favor, informe uma descrição para o lançamento.', 'error');
-      return;
-    }
-
     const tags = tagsInput
       .split(',')
       .map((t) => t.trim())
       .filter(Boolean);
+
+    // EDIT MODE
+    if (editingTransaction) {
+      if (!description.trim()) {
+        showToast('Erro de validação', 'Por favor, informe uma descrição para o lançamento.', 'error');
+        return;
+      }
+
+      updateTransaction(editingTransaction.id, {
+        description: description.trim(),
+        amount: numAmount,
+        type,
+        status,
+        categoryId: type !== 'transfer' ? categoryId : editingTransaction.categoryId,
+        accountId,
+        targetAccountId: type === 'transfer' ? targetAccountId : undefined,
+        contactId: contactId || undefined,
+        costCenterId: costCenterId || undefined,
+        dueDate,
+        paymentDate: status === 'paid' ? paymentDate || dueDate : undefined,
+        competenceDate,
+        paymentMethod,
+        documentNumber: documentNumber || undefined,
+        notes: notes || undefined,
+        tags,
+        attachments: attachments.map((a) => ({ ...a, uploadedAt: (a as any).uploadedAt || new Date().toISOString() })),
+      });
+
+      closeQuickEntry();
+      return;
+    }
+
+    // CREATE MODE: TRANSFER
+    if (type === 'transfer') {
+      transferFunds(accountId, targetAccountId, numAmount, dueDate, description);
+      if (!keepOpen) closeQuickEntry();
+      else resetForm();
+      return;
+    }
+
+    // CREATE MODE: INCOME / EXPENSE
+    if (!description.trim()) {
+      showToast('Erro de validação', 'Por favor, informe uma descrição para o lançamento.', 'error');
+      return;
+    }
 
     addTransaction(
       {
@@ -193,7 +255,7 @@ export const QuickTransactionModal: React.FC = () => {
     );
 
     if (!keepOpen) {
-      setIsQuickEntryOpen(false);
+      closeQuickEntry();
     } else {
       resetForm();
     }
@@ -204,9 +266,25 @@ export const QuickTransactionModal: React.FC = () => {
   return (
     <Modal
       isOpen={isQuickEntryOpen}
-      onClose={() => setIsQuickEntryOpen(false)}
-      title="Novo Lançamento"
-      subtitle="Cadastre movimentações com agilidade e precisão"
+      onClose={closeQuickEntry}
+      title={
+        editingTransaction
+          ? type === 'income'
+            ? 'Editar Receita'
+            : type === 'expense'
+            ? 'Editar Despesa'
+            : 'Editar Transferência'
+          : type === 'income'
+          ? 'Nova Receita'
+          : type === 'expense'
+          ? 'Nova Despesa'
+          : 'Nova Transferência'
+      }
+      subtitle={
+        editingTransaction
+          ? 'Atualize valores, categoria, conta bancária e datas deste lançamento'
+          : 'Cadastre movimentações financeiras com agilidade e precisão'
+      }
       maxWidth="2xl"
     >
       <div className="space-y-5">
@@ -549,83 +627,101 @@ export const QuickTransactionModal: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Installments & Recurrence Checkboxes */}
-                <div className="pt-2 border-t border-slate-200/50 dark:border-slate-800/60 space-y-3">
-                  <div className="flex items-center gap-6">
-                    <label className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isInstallment}
-                        onChange={(e) => {
-                          setIsInstallment(e.target.checked);
-                          if (e.target.checked) setIsRecurrent(false);
-                        }}
-                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
-                      />
-                      <span>Parcelar em várias vezes</span>
-                    </label>
+                {/* Installments & Recurrence info/controls */}
+                {!editingTransaction ? (
+                  <div className="pt-2 border-t border-slate-200/50 dark:border-slate-800/60 space-y-3">
+                    <div className="flex items-center gap-6">
+                      <label className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isInstallment}
+                          onChange={(e) => {
+                            setIsInstallment(e.target.checked);
+                            if (e.target.checked) setIsRecurrent(false);
+                          }}
+                          className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span>Parcelar em várias vezes</span>
+                      </label>
 
-                    <label className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isRecurrent}
-                        onChange={(e) => {
-                          setIsRecurrent(e.target.checked);
-                          if (e.target.checked) setIsInstallment(false);
-                        }}
-                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
-                      />
-                      <span>Lançamento fixo / recorrente</span>
-                    </label>
+                      <label className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isRecurrent}
+                          onChange={(e) => {
+                            setIsRecurrent(e.target.checked);
+                            if (e.target.checked) setIsInstallment(false);
+                          }}
+                          className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span>Lançamento fixo / recorrente</span>
+                      </label>
+                    </div>
+
+                    {isInstallment && (
+                      <div className="p-3 bg-slate-100 dark:bg-[#161f30] rounded-xl border border-slate-200 dark:border-slate-700/60 flex items-center gap-3">
+                        <span className="text-xs font-semibold text-slate-400">Parcelas:</span>
+                        <select
+                          value={installmentsCount}
+                          onChange={(e) => setInstallmentsCount(Number(e.target.value))}
+                          className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-bold"
+                        >
+                          {[2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 18, 24, 36, 48].map((n) => (
+                            <option key={n} value={n}>
+                              {n}x de {formatCurrency(numAmount > 0 ? numAmount / n : 0)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {isRecurrent && (
+                      <div className="p-3 bg-slate-100 dark:bg-[#161f30] rounded-xl border border-slate-200 dark:border-slate-700/60 flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-slate-400">Frequência:</span>
+                          <select
+                            value={recurrenceFreq}
+                            onChange={(e) => setRecurrenceFreq(e.target.value as RecurrenceFrequency)}
+                            className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-bold"
+                          >
+                            <option value="weekly">Semanal</option>
+                            <option value="monthly">Mensal</option>
+                            <option value="quarterly">Trimestral</option>
+                            <option value="yearly">Anual</option>
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-slate-400">Repetições:</span>
+                          <select
+                            value={recurrenceMonths}
+                            onChange={(e) => setRecurrenceMonths(Number(e.target.value))}
+                            className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-bold"
+                          >
+                            <option value={6}>6 vezes</option>
+                            <option value={12}>12 vezes</option>
+                            <option value={24}>24 vezes</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
                   </div>
-
-                  {isInstallment && (
-                    <div className="p-3 bg-slate-100 dark:bg-[#161f30] rounded-xl border border-slate-200 dark:border-slate-700/60 flex items-center gap-3">
-                      <span className="text-xs font-semibold text-slate-400">Parcelas:</span>
-                      <select
-                        value={installmentsCount}
-                        onChange={(e) => setInstallmentsCount(Number(e.target.value))}
-                        className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-bold"
-                      >
-                        {[2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 18, 24, 36, 48].map((n) => (
-                          <option key={n} value={n}>
-                            {n}x de {formatCurrency(numAmount > 0 ? numAmount / n : 0)}
-                          </option>
-                        ))}
-                      </select>
+                ) : (
+                  (editingTransaction.installment || editingTransaction.recurrence) && (
+                    <div className="p-3 bg-slate-100 dark:bg-[#161f30] rounded-xl border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs">
+                      {editingTransaction.installment && (
+                        <span className="font-semibold text-slate-600 dark:text-slate-300">
+                          📦 Registro de Parcela: <strong>{editingTransaction.installment.current} de {editingTransaction.installment.total}</strong>
+                        </span>
+                      )}
+                      {editingTransaction.recurrence && (
+                        <span className="font-semibold text-slate-600 dark:text-slate-300">
+                          🔁 Lançamento Recorrente ({editingTransaction.recurrence.frequency}) — Ocorrência {editingTransaction.recurrence.current}/{editingTransaction.recurrence.count}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-slate-400">Edição individual</span>
                     </div>
-                  )}
-
-                  {isRecurrent && (
-                    <div className="p-3 bg-slate-100 dark:bg-[#161f30] rounded-xl border border-slate-200 dark:border-slate-700/60 flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-slate-400">Frequência:</span>
-                        <select
-                          value={recurrenceFreq}
-                          onChange={(e) => setRecurrenceFreq(e.target.value as RecurrenceFrequency)}
-                          className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-bold"
-                        >
-                          <option value="weekly">Semanal</option>
-                          <option value="monthly">Mensal</option>
-                          <option value="quarterly">Trimestral</option>
-                          <option value="yearly">Anual</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-slate-400">Repetições:</span>
-                        <select
-                          value={recurrenceMonths}
-                          onChange={(e) => setRecurrenceMonths(Number(e.target.value))}
-                          className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-bold"
-                        >
-                          <option value={6}>6 vezes</option>
-                          <option value={12}>12 vezes</option>
-                          <option value={24}>24 vezes</option>
-                        </select>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  )
+                )}
               </div>
             )}
           </div>
@@ -633,19 +729,25 @@ export const QuickTransactionModal: React.FC = () => {
 
         {/* Actions Footer */}
         <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800/80">
-          <button
-            type="button"
-            onClick={() => handleSubmit(true)}
-            className="px-3.5 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors flex items-center gap-1.5"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Salvar e Novo</span>
-          </button>
+          {!editingTransaction ? (
+            <button
+              type="button"
+              onClick={() => handleSubmit(true)}
+              className="px-3.5 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors flex items-center gap-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Salvar e Novo</span>
+            </button>
+          ) : (
+            <div className="text-[11px] text-slate-400 font-medium">
+              ID: <span className="font-mono text-slate-500">{editingTransaction.id}</span>
+            </div>
+          )}
 
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setIsQuickEntryOpen(false)}
+              onClick={closeQuickEntry}
               className="px-4 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
             >
               Cancelar
@@ -661,7 +763,7 @@ export const QuickTransactionModal: React.FC = () => {
                   : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/25'
               }`}
             >
-              Salvar Lançamento
+              {editingTransaction ? 'Salvar Alterações' : 'Salvar Lançamento'}
             </button>
           </div>
         </div>

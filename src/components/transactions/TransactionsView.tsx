@@ -3,6 +3,7 @@ import {
   ArrowLeftRight,
   Plus,
   Trash2,
+  Edit2,
   CheckCircle2,
   Calendar,
   Search,
@@ -27,6 +28,7 @@ export const TransactionsView: React.FC = () => {
     contacts,
     costCenters,
     openQuickEntry,
+    openEditTransaction,
     openSettlementModal,
     deleteTransaction,
     deleteMultipleTransactions,
@@ -536,15 +538,22 @@ export const TransactionsView: React.FC = () => {
                           {txn.status !== 'paid' && (
                             <button
                               onClick={() => openSettlementModal(txn)}
-                              className="p-1 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg transition-colors"
+                              className="p-1.5 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg transition-colors"
                               title="Liquidar / Dar Baixa"
                             >
                               <CheckCircle2 className="w-4 h-4" />
                             </button>
                           )}
                           <button
+                            onClick={() => openEditTransaction(txn)}
+                            className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors"
+                            title="Editar Lançamento"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => setDeleteTargetTxn(txn)}
-                            className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
                             title="Excluir Lançamento"
                           >
                             <Trash2 className="w-4 h-4" />

@@ -6,6 +6,7 @@ import {
   Clock,
   Calendar,
   CheckCircle2,
+  Edit2,
   Search,
   Plus,
   ArrowUpRight,
@@ -23,6 +24,7 @@ export const PayablesReceivablesView: React.FC = () => {
     contacts,
     accounts,
     openQuickEntry,
+    openEditTransaction,
     openSettlementModal,
     activeTab,
   } = useFinance();
@@ -202,9 +204,9 @@ export const PayablesReceivablesView: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <span
-                      className={`font-mono font-bold text-sm ${
+                      className={`font-mono font-bold text-sm mr-1 ${
                         activeSubTab === 'payables'
                           ? 'text-rose-600 dark:text-rose-400'
                           : 'text-emerald-600 dark:text-emerald-400'
@@ -212,6 +214,13 @@ export const PayablesReceivablesView: React.FC = () => {
                     >
                       {formatCurrency(txn.amount)}
                     </span>
+                    <button
+                      onClick={() => openEditTransaction(txn)}
+                      className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors"
+                      title="Editar Lançamento"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
                     <button
                       onClick={() => openSettlementModal(txn)}
                       className={`px-3 py-1.5 text-xs font-bold text-white rounded-lg shadow-sm transition-all flex items-center gap-1.5 ${
