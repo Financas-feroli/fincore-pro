@@ -77,10 +77,10 @@ const AuthGate: React.FC = () => {
     return (
       <div className="min-h-screen w-screen flex flex-col items-center justify-center bg-slate-950 text-white">
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-extrabold text-2xl shadow-xl shadow-emerald-500/20 animate-pulse">
-          F
+          P
         </div>
         <p className="text-xs text-slate-400 font-medium mt-4">
-          Iniciando ambiente seguro FinCore Pro...
+          Iniciando ambiente seguro PROSPER...
         </p>
       </div>
     );

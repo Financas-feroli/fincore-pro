@@ -97,12 +97,12 @@ export const Sidebar: React.FC = () => {
         {/* Brand Header */}
         <div className="p-5 border-b border-slate-100 dark:border-slate-800/80 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-md shadow-emerald-500/20 text-white font-black text-xl">
-            F
+            P
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
-              <h1 className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white leading-tight">
-                FinCore<span className="text-emerald-500">Pro</span>
+              <h1 className="font-extrabold text-base tracking-wider text-slate-900 dark:text-white leading-tight">
+                PROSPER
               </h1>
               <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded border border-emerald-300/40">
                 SaaS

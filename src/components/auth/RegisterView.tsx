@@ -70,10 +70,10 @@ export const RegisterView: React.FC<RegisterViewProps> = ({ onSwitchToLogin }) =
         {/* Top Logo */}
         <div className="flex items-center gap-3 relative z-10">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-emerald-500/20">
-            F
+            P
           </div>
           <div>
-            <span className="text-lg font-bold text-white tracking-tight">FinCore</span>
+            <span className="text-lg font-extrabold text-white tracking-wider">PROSPER</span>
             <span className="text-[10px] ml-1.5 font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
               SaaS Pro
             </span>

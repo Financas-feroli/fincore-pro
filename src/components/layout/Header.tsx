@@ -108,7 +108,7 @@ export const Header: React.FC = () => {
   };
 
   const currentTabInfo = tabTitles[activeTab] || {
-    title: 'FinCore Pro',
+    title: 'PROSPER',
     desc: 'Sistema Financeiro',
   };
 

@@ -226,7 +226,7 @@ export const ReportsView: React.FC = () => {
                 : `RELATÓRIO POR CENTRO DE CUSTO — ${selectedMonth}`}
             </p>
             <p className="text-[11px] mt-1">
-              Emitido em: {new Date().toLocaleDateString('pt-BR')} • FinCore Pro
+              Emitido em: {new Date().toLocaleDateString('pt-BR')} • PROSPER
             </p>
           </div>
         </div>

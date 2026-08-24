@@ -81,7 +81,7 @@ export const SettingsView: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h4 className="text-base font-bold text-white leading-tight">
-                  Plano FinCore {planName}
+                  Plano PROSPER {planName}
                 </h4>
                 <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30">
                   {isTrial ? 'Período de Testes (14 dias)' : 'Assinatura Ativa'}
