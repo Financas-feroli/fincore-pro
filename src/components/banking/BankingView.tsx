@@ -490,32 +490,28 @@ export const BankingView: React.FC = () => {
         onClose={() => setIsAccountModalOpen(false)}
         title={editingAccountId ? 'Editar Conta Bancária' : 'Nova Conta Bancária ou Cartão'}
         subtitle="Configure detalhes da instituição financeira, agência e saldos"
-        maxWidth="xl"
+        maxWidth="2xl"
       >
         <form onSubmit={handleSaveAccount} className="space-y-4">
-          <div className="space-y-1.5">
-            <div className="h-5 flex items-center">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                Nome de Identificação da Conta
-              </label>
-            </div>
-            <input
-              type="text"
-              placeholder="Ex: Itaú PJ Principal, Nubank Reserva..."
-              value={accName}
-              onChange={(e) => setAccName(e.target.value)}
-              required
-              className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl placeholder:font-normal placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <div className="h-5 flex items-center">
-                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Instituição / Banco
-                </label>
-              </div>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Nome de Identificação da Conta *
+              </label>
+              <input
+                type="text"
+                placeholder="Ex: Itaú PJ Principal, Nubank Reserva..."
+                value={accName}
+                onChange={(e) => setAccName(e.target.value)}
+                required
+                className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl placeholder:font-normal placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Instituição / Banco
+              </label>
               <select
                 value={accBankName}
                 onChange={(e) => setAccBankName(e.target.value)}
@@ -534,13 +530,13 @@ export const BankingView: React.FC = () => {
                 <option value="Outro">Outra Instituição</option>
               </select>
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <div className="h-5 flex items-center">
-                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Tipo de Conta
-                </label>
-              </div>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Tipo de Conta
+              </label>
               <select
                 value={accType}
                 onChange={(e) => setAccType(e.target.value as BankAccount['type'])}
@@ -553,16 +549,38 @@ export const BankingView: React.FC = () => {
                 <option value="cash">Caixa Físico (Fundo Fixo)</option>
               </select>
             </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  {editingAccountId ? 'Saldo da Conta (R$)' : 'Saldo Inicial (R$)'}
+                </label>
+                {editingAccountId && (
+                  <button
+                    type="button"
+                    onClick={() => setAccInitialBalance('0')}
+                    className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
+                  >
+                    Zerar Saldo (R$ 0,00)
+                  </button>
+                )}
+              </div>
+              <input
+                type="text"
+                placeholder="0,00"
+                value={accInitialBalance}
+                onChange={(e) => setAccInitialBalance(e.target.value)}
+                className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl font-mono focus:outline-none focus:border-emerald-500"
+              />
+            </div>
           </div>
 
           {accType === 'credit_card' ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-3.5 bg-slate-100/60 dark:bg-[#161f30] rounded-xl border border-slate-200 dark:border-slate-700/70">
               <div className="space-y-1.5">
-                <div className="h-5 flex items-center">
-                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                    Limite Total (R$)
-                  </label>
-                </div>
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Limite Total (R$)
+                </label>
                 <input
                   type="text"
                   value={accCreditLimit}
@@ -571,11 +589,9 @@ export const BankingView: React.FC = () => {
                 />
               </div>
               <div className="space-y-1.5">
-                <div className="h-5 flex items-center">
-                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                    Dia Fechamento
-                  </label>
-                </div>
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Dia Fechamento
+                </label>
                 <input
                   type="number"
                   min="1"
@@ -586,11 +602,9 @@ export const BankingView: React.FC = () => {
                 />
               </div>
               <div className="space-y-1.5">
-                <div className="h-5 flex items-center">
-                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                    Dia Vencimento
-                  </label>
-                </div>
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Dia Vencimento
+                </label>
                 <input
                   type="number"
                   min="1"
@@ -602,13 +616,11 @@ export const BankingView: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <div className="h-5 flex items-center">
-                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                    Agência
-                  </label>
-                </div>
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Agência
+                </label>
                 <input
                   type="text"
                   placeholder="0001"
@@ -618,11 +630,9 @@ export const BankingView: React.FC = () => {
                 />
               </div>
               <div className="space-y-1.5">
-                <div className="h-5 flex items-center">
-                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                    Conta Corrente
-                  </label>
-                </div>
+                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Conta Corrente
+                </label>
                 <input
                   type="text"
                   placeholder="12345-6"
@@ -631,34 +641,11 @@ export const BankingView: React.FC = () => {
                   className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl"
                 />
               </div>
-              <div className="space-y-1.5">
-                <div className="h-5 flex items-center justify-between gap-2">
-                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider truncate">
-                    {editingAccountId ? 'Saldo da Conta (R$)' : 'Saldo Inicial (R$)'}
-                  </label>
-                  {editingAccountId && (
-                    <button
-                      type="button"
-                      onClick={() => setAccInitialBalance('0')}
-                      className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline whitespace-nowrap"
-                    >
-                      Zerar (R$ 0,00)
-                    </button>
-                  )}
-                </div>
-                <input
-                  type="text"
-                  placeholder="0,00"
-                  value={accInitialBalance}
-                  onChange={(e) => setAccInitialBalance(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl font-mono focus:outline-none focus:border-emerald-500"
-                />
-              </div>
             </div>
           )}
 
           {/* Color theme for the bank card */}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 pt-1">
             <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
               Cor do Cartão
             </label>
