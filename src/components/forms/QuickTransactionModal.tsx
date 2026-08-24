@@ -15,7 +15,7 @@ import {
   TransactionType,
   TransactionStatus,
 } from '../../types';
-import { formatCurrency, getTodayDateString, parseBRL } from '../../utils/formatters';
+import { formatCurrency, formatDate, getTodayDateString, parseBRL } from '../../utils/formatters';
 
 export const QuickTransactionModal: React.FC = () => {
   const {
