@@ -108,6 +108,8 @@ interface FinanceContextType {
   addAccount: (account: Omit<BankAccount, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateAccount: (id: string, updates: Partial<BankAccount>) => void;
   deleteAccount: (id: string) => void;
+  recalculateAccountBalances: () => void;
+  setAccountBalanceDirectly: (accountId: string, newBalance: number, resetInitial?: boolean) => void;
 
   // Category Operations
   addCategory: (category: Omit<Category, 'id'>) => void;
@@ -655,6 +657,52 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     showToast('Conta removida', 'Conta bancária excluída.', 'warning');
   };
 
+  // Recalculates all account balances strictly from initial balance + paid transactions
+  const recalculateAccountBalances = () => {
+    const balanceMap = new Map<string, number>();
+    accounts.forEach((acc) => {
+      balanceMap.set(acc.id, acc.initialBalance || 0);
+    });
+
+    transactions.forEach((txn) => {
+      if (txn.status !== 'paid' || txn.status === 'cancelled') return;
+      if (txn.type === 'income') {
+        balanceMap.set(txn.accountId, (balanceMap.get(txn.accountId) || 0) + txn.amount);
+      } else if (txn.type === 'expense') {
+        balanceMap.set(txn.accountId, (balanceMap.get(txn.accountId) || 0) - txn.amount);
+      } else if (txn.type === 'transfer' && txn.targetAccountId) {
+        balanceMap.set(txn.accountId, (balanceMap.get(txn.accountId) || 0) - txn.amount);
+        balanceMap.set(txn.targetAccountId, (balanceMap.get(txn.targetAccountId) || 0) + txn.amount);
+      }
+    });
+
+    const updated = accounts.map((acc) => ({
+      ...acc,
+      currentBalance: Math.round(((balanceMap.get(acc.id) || 0) + Number.EPSILON) * 100) / 100,
+      updatedAt: new Date().toISOString(),
+    }));
+
+    syncAccounts(updated);
+    showToast('Saldos recalculados', 'Os saldos bancários foram sincronizados com os lançamentos.', 'info');
+  };
+
+  // Directly adjust account balance (e.g. calibration or zeroing)
+  const setAccountBalanceDirectly = (accountId: string, newBalance: number, resetInitial = false) => {
+    const num = Math.round((newBalance + Number.EPSILON) * 100) / 100;
+    const updated = accounts.map((a) =>
+      a.id === accountId
+        ? {
+            ...a,
+            currentBalance: num,
+            initialBalance: resetInitial ? num : a.initialBalance,
+            updatedAt: new Date().toISOString(),
+          }
+        : a
+    );
+    syncAccounts(updated);
+    showToast('Saldo atualizado', `Saldo da conta ajustado para R$ ${num.toFixed(2)}.`, 'success');
+  };
+
   // CATEGORIES CRUD
   const addCategory = (data: Omit<Category, 'id'>) => {
     const newCat: Category = {
@@ -812,6 +860,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addAccount,
         updateAccount,
         deleteAccount,
+        recalculateAccountBalances,
+        setAccountBalanceDirectly,
         addCategory,
         updateCategory,
         deleteCategory,

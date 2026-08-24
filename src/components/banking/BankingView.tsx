@@ -10,6 +10,7 @@ import {
   Trash2,
   Edit2,
   Sparkles,
+  RefreshCw,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -24,6 +25,8 @@ export const BankingView: React.FC = () => {
     addAccount,
     updateAccount,
     deleteAccount,
+    recalculateAccountBalances,
+    setAccountBalanceDirectly,
     transferFunds,
     transactions,
     addTransaction,
@@ -69,7 +72,7 @@ export const BankingView: React.FC = () => {
       setAccAgency(accountToEdit.agency || '');
       setAccNumber(accountToEdit.accountNumber || '');
       setAccType(accountToEdit.type);
-      setAccInitialBalance(accountToEdit.initialBalance.toString());
+      setAccInitialBalance(accountToEdit.currentBalance.toString());
       setAccColor(accountToEdit.color);
       setAccCreditLimit((accountToEdit.creditLimit || 0).toString());
       setAccClosingDay(accountToEdit.closingDay || 25);
@@ -94,7 +97,7 @@ export const BankingView: React.FC = () => {
     e.preventDefault();
     if (!accName.trim()) return;
 
-    const initialBal = parseFloat(accInitialBalance.replace(',', '.')) || 0;
+    const initialBal = Math.round((parseFloat(accInitialBalance.replace(',', '.')) || 0) * 100) / 100;
     const limit = parseFloat(accCreditLimit.replace(',', '.')) || 0;
 
     if (editingAccountId) {
@@ -104,6 +107,8 @@ export const BankingView: React.FC = () => {
         agency: accAgency,
         accountNumber: accNumber,
         type: accType,
+        initialBalance: initialBal,
+        currentBalance: initialBal,
         color: accColor,
         creditLimit: accType === 'credit_card' ? limit : undefined,
         closingDay: accType === 'credit_card' ? accClosingDay : undefined,
@@ -228,6 +233,14 @@ export const BankingView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={recalculateAccountBalances}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors border border-slate-200 dark:border-slate-700"
+            title="Recalcula e reconcilia todos os saldos bancários com base no histórico de lançamentos"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-emerald-500" />
+            <span className="hidden sm:inline">Recalcular Saldos</span>
+          </button>
           <button
             onClick={() => setIsTransferModalOpen(true)}
             className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors border border-slate-200 dark:border-slate-700"
@@ -603,16 +616,26 @@ export const BankingView: React.FC = () => {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Saldo Inicial (R$)
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    {editingAccountId ? 'Saldo da Conta (R$)' : 'Saldo Inicial (R$)'}
+                  </label>
+                  {editingAccountId && (
+                    <button
+                      type="button"
+                      onClick={() => setAccInitialBalance('0')}
+                      className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
+                    >
+                      Zerar (R$ 0,00)
+                    </button>
+                  )}
+                </div>
                 <input
                   type="text"
                   placeholder="0,00"
-                  disabled={!!editingAccountId}
                   value={accInitialBalance}
                   onChange={(e) => setAccInitialBalance(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl font-mono disabled:opacity-50"
+                  className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl font-mono focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
