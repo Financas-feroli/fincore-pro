@@ -344,16 +344,30 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         let calculatedDueDate = data.dueDate;
         let calculatedCompetence = data.competenceDate;
 
-        if (recurrenceFreq === 'weekly') {
+        if (recurrenceFreq === 'daily') {
+          const baseD = new Date(data.dueDate.split('T')[0]);
+          baseD.setDate(baseD.getDate() + (i - 1));
+          calculatedDueDate = baseD.toISOString().split('T')[0];
+        } else if (recurrenceFreq === 'weekly') {
           const baseD = new Date(data.dueDate.split('T')[0]);
           baseD.setDate(baseD.getDate() + (i - 1) * 7);
+          calculatedDueDate = baseD.toISOString().split('T')[0];
+        } else if (recurrenceFreq === 'biweekly') {
+          const baseD = new Date(data.dueDate.split('T')[0]);
+          baseD.setDate(baseD.getDate() + (i - 1) * 14);
           calculatedDueDate = baseD.toISOString().split('T')[0];
         } else if (recurrenceFreq === 'monthly') {
           calculatedDueDate = addMonthsClampDay(data.dueDate, i - 1);
           calculatedCompetence = addMonthsClampDay(data.competenceDate, i - 1);
+        } else if (recurrenceFreq === 'bimonthly') {
+          calculatedDueDate = addMonthsClampDay(data.dueDate, (i - 1) * 2);
+          calculatedCompetence = addMonthsClampDay(data.competenceDate, (i - 1) * 2);
         } else if (recurrenceFreq === 'quarterly') {
           calculatedDueDate = addMonthsClampDay(data.dueDate, (i - 1) * 3);
           calculatedCompetence = addMonthsClampDay(data.competenceDate, (i - 1) * 3);
+        } else if (recurrenceFreq === 'semiannual') {
+          calculatedDueDate = addMonthsClampDay(data.dueDate, (i - 1) * 6);
+          calculatedCompetence = addMonthsClampDay(data.competenceDate, (i - 1) * 6);
         } else if (recurrenceFreq === 'yearly') {
           calculatedDueDate = addMonthsClampDay(data.dueDate, (i - 1) * 12);
           calculatedCompetence = addMonthsClampDay(data.competenceDate, (i - 1) * 12);

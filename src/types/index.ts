@@ -11,7 +11,16 @@ export type PaymentMethod =
   | 'cash' 
   | 'other';
 
-export type RecurrenceFrequency = 'none' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+export type RecurrenceFrequency =
+  | 'none'
+  | 'daily'
+  | 'weekly'
+  | 'biweekly'
+  | 'monthly'
+  | 'bimonthly'
+  | 'quarterly'
+  | 'semiannual'
+  | 'yearly';
 
 export type AccountType = 'checking' | 'savings' | 'investment' | 'cash' | 'credit_card' | 'digital';
 
