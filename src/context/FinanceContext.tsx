@@ -150,7 +150,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    return (localStorage.getItem('fincore_theme') as 'dark' | 'light') || 'dark';
+    return (localStorage.getItem('prosper_theme') as 'dark' | 'light') || (localStorage.getItem('fincore_theme') as 'dark' | 'light') || 'dark';
   });
 
   const [isQuickEntryOpen, setIsQuickEntryOpen] = useState(false);
@@ -185,7 +185,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } else {
       root.classList.remove('dark');
     }
-    localStorage.setItem('fincore_theme', theme);
+    localStorage.setItem('prosper_theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {

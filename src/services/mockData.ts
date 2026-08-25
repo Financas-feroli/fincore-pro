@@ -1,10 +1,10 @@
 import { BankAccount, Category, CompanyProfile, Contact, CostCenter, Transaction } from '../types';
 
 export const initialCompanyProfile: CompanyProfile = {
-  name: 'FinCore Pro Soluções Corporativas Ltda',
-  tradeName: 'FinCore Pro',
+  name: 'PROSPER Soluções Corporativas Ltda',
+  tradeName: 'PROSPER',
   document: '34.892.110/0001-95',
-  email: 'financeiro@fincorepro.com.br',
+  email: 'financeiro@prosper.com.br',
   phone: '(11) 3456-7890',
   address: 'Av. Paulista, 1800 - 14º Andar - Bela Vista',
   city: 'São Paulo',

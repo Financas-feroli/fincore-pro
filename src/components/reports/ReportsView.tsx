@@ -205,7 +205,7 @@ export const ReportsView: React.FC = () => {
         <div className="flex items-start justify-between pb-6 border-b border-slate-200 dark:border-slate-800 mb-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white font-extrabold text-2xl shadow-md">
-              F
+              {companyProfile.tradeName ? companyProfile.tradeName.charAt(0).toUpperCase() : (companyProfile.name ? companyProfile.name.charAt(0).toUpperCase() : 'P')}
             </div>
             <div>
               <h2 className="text-lg font-extrabold text-slate-900 dark:text-white leading-tight">

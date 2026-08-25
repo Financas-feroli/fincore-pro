@@ -17,6 +17,16 @@ import {
 } from './mockData';
 
 const STORAGE_KEYS = {
+  TRANSACTIONS: 'prosper_transactions_v1',
+  ACCOUNTS: 'prosper_accounts_v1',
+  CATEGORIES: 'prosper_categories_v1',
+  COST_CENTERS: 'prosper_cost_centers_v1',
+  CONTACTS: 'prosper_contacts_v1',
+  COMPANY: 'prosper_company_v1',
+  THEME: 'prosper_theme_v1',
+};
+
+const LEGACY_KEYS = {
   TRANSACTIONS: 'fincore_transactions_v1',
   ACCOUNTS: 'fincore_accounts_v1',
   CATEGORIES: 'fincore_categories_v1',
@@ -48,12 +58,18 @@ export const storageService = {
     companyProfile: CompanyProfile;
   } {
     try {
-      const storedTransactions = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-      const storedAccounts = localStorage.getItem(STORAGE_KEYS.ACCOUNTS);
-      const storedCategories = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
-      const storedCostCenters = localStorage.getItem(STORAGE_KEYS.COST_CENTERS);
-      const storedContacts = localStorage.getItem(STORAGE_KEYS.CONTACTS);
-      const storedCompany = localStorage.getItem(STORAGE_KEYS.COMPANY);
+      const storedTransactions =
+        localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) || localStorage.getItem(LEGACY_KEYS.TRANSACTIONS);
+      const storedAccounts =
+        localStorage.getItem(STORAGE_KEYS.ACCOUNTS) || localStorage.getItem(LEGACY_KEYS.ACCOUNTS);
+      const storedCategories =
+        localStorage.getItem(STORAGE_KEYS.CATEGORIES) || localStorage.getItem(LEGACY_KEYS.CATEGORIES);
+      const storedCostCenters =
+        localStorage.getItem(STORAGE_KEYS.COST_CENTERS) || localStorage.getItem(LEGACY_KEYS.COST_CENTERS);
+      const storedContacts =
+        localStorage.getItem(STORAGE_KEYS.CONTACTS) || localStorage.getItem(LEGACY_KEYS.CONTACTS);
+      const storedCompany =
+        localStorage.getItem(STORAGE_KEYS.COMPANY) || localStorage.getItem(LEGACY_KEYS.COMPANY);
 
       if (!storedTransactions) {
         // First run: initialize with rich demo data
@@ -75,13 +91,28 @@ export const storageService = {
         };
       }
 
+      let companyProfile: CompanyProfile = storedCompany ? JSON.parse(storedCompany) : initialCompanyProfile;
+      if (
+        companyProfile.name.includes('FinCore') ||
+        companyProfile.tradeName?.includes('FinCore') ||
+        companyProfile.email?.includes('fincore')
+      ) {
+        companyProfile = {
+          ...companyProfile,
+          name: companyProfile.name.replace(/FinCore Pro/gi, 'PROSPER').replace(/FinCore/gi, 'PROSPER'),
+          tradeName: 'PROSPER',
+          email: companyProfile.email.replace(/fincorepro/gi, 'prosper').replace(/fincore/gi, 'prosper'),
+        };
+        localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(companyProfile));
+      }
+
       return {
         transactions: storedTransactions ? JSON.parse(storedTransactions) : [],
         accounts: storedAccounts ? JSON.parse(storedAccounts) : initialBankAccounts,
         categories: storedCategories ? JSON.parse(storedCategories) : initialCategories,
         costCenters: storedCostCenters ? JSON.parse(storedCostCenters) : initialCostCenters,
         contacts: storedContacts ? JSON.parse(storedContacts) : initialContacts,
-        companyProfile: storedCompany ? JSON.parse(storedCompany) : initialCompanyProfile,
+        companyProfile,
       };
     } catch (e) {
       console.error('Failed to load from storage, using initial mock data', e);
@@ -158,7 +189,7 @@ export const storageService = {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `backup_fincore_pro_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `backup_prosper_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
   },
@@ -218,7 +249,7 @@ export const storageService = {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `lancamentos_fincore_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `lancamentos_prosper_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
