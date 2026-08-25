@@ -155,9 +155,9 @@ export const BankingView: React.FC = () => {
       const content = event.target?.result as string;
       if (!content) return;
 
-      const parsedItems = storageService.parseOFX(content);
+      const parsedItems = storageService.parseOFX(content, file.name);
       if (parsedItems.length === 0) {
-        showToast('Aviso', 'Nenhum lançamento identificado no arquivo enviado.', 'warning');
+        showToast('Aviso', 'Nenhum lançamento identificado no arquivo enviado. Certifique-se de que é um extrato .OFX ou .CSV válido.', 'warning');
         return;
       }
 
@@ -181,7 +181,12 @@ export const BankingView: React.FC = () => {
       });
 
       setReconciliationItems(matched);
-      showToast('Extrato Processado', `${parsedItems.length} transações lidas do extrato bancário.`, 'success');
+      const autoMatchedCount = matched.filter((i) => i.status === 'matched').length;
+      showToast(
+        'Extrato Processado com Sucesso',
+        `${parsedItems.length} transações identificadas (${autoMatchedCount} conciliadas automaticamente).`,
+        'success'
+      );
     };
     reader.readAsText(file);
   };
@@ -205,11 +210,53 @@ export const BankingView: React.FC = () => {
       competenceDate: item.date.substring(0, 7) + '-01',
       paymentMethod: 'bank_transfer',
       reconciled: true,
-      tags: ['Conciliado', 'ExtratoOFX'],
+      tags: ['Conciliado', 'ExtratoBancario'],
     });
 
     setReconciliationItems((prev) =>
       prev.map((i) => (i.id === item.id ? { ...i, status: 'matched' as const } : i))
+    );
+
+    showToast('Conciliado', `Lançamento "${item.description}" criado com sucesso.`, 'success');
+  };
+
+  // Batch import all remaining unmatched items
+  const handleBatchImportUnmatched = () => {
+    const unmatched = reconciliationItems.filter((i) => i.status !== 'matched');
+    if (unmatched.length === 0) return;
+
+    let count = 0;
+    unmatched.forEach((item) => {
+      const defaultCat = categories.find(
+        (c) => c.type === (item.type === 'CREDIT' ? 'income' : 'expense')
+      );
+
+      addTransaction({
+        description: item.description,
+        amount: item.amount,
+        originalAmount: item.amount,
+        type: item.type === 'CREDIT' ? 'income' : 'expense',
+        status: 'paid',
+        categoryId: defaultCat?.id || categories[0]?.id || '',
+        accountId: selectedReconcileAcc,
+        dueDate: item.date,
+        paymentDate: item.date,
+        competenceDate: item.date.substring(0, 7) + '-01',
+        paymentMethod: 'bank_transfer',
+        reconciled: true,
+        tags: ['Conciliado', 'ExtratoBancario'],
+      });
+      count++;
+    });
+
+    setReconciliationItems((prev) =>
+      prev.map((i) => ({ ...i, status: 'matched' as const }))
+    );
+
+    showToast(
+      'Importação em Lote Concluída',
+      `${count} transações foram criadas e conciliadas no saldo da conta com sucesso!`,
+      'success'
     );
   };
 
@@ -417,15 +464,61 @@ export const BankingView: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <span>{reconciliationItems.length} transações identificadas no extrato</span>
-              <span className="text-emerald-500 font-bold">
-                {reconciliationItems.filter((i) => i.status === 'matched').length} conciliadas
-              </span>
+          <div className="space-y-4">
+            {/* Statement Summary KPI Pills */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/70 dark:border-slate-800 text-xs">
+              <div>
+                <span className="text-[10px] text-slate-400 uppercase font-semibold">Total no Extrato</span>
+                <p className="text-sm font-bold font-mono text-slate-800 dark:text-slate-200 mt-0.5">
+                  {reconciliationItems.length} lançamentos
+                </p>
+              </div>
+              <div>
+                <span className="text-[10px] text-emerald-500 uppercase font-semibold">Total Entradas</span>
+                <p className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  + {formatCurrency(reconciliationItems.filter((i) => i.type === 'CREDIT').reduce((acc, t) => acc + t.amount, 0))}
+                </p>
+              </div>
+              <div>
+                <span className="text-[10px] text-rose-500 uppercase font-semibold">Total Saídas</span>
+                <p className="text-sm font-bold font-mono text-rose-600 dark:text-rose-400 mt-0.5">
+                  - {formatCurrency(reconciliationItems.filter((i) => i.type === 'DEBIT').reduce((acc, t) => acc + t.amount, 0))}
+                </p>
+              </div>
+              <div className="flex items-center justify-end sm:justify-center">
+                {reconciliationItems.some((i) => i.status !== 'matched') ? (
+                  <button
+                    onClick={handleBatchImportUnmatched}
+                    className="w-full px-3 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition-all"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Importar Todos ({reconciliationItems.filter((i) => i.status !== 'matched').length})</span>
+                  </button>
+                ) : (
+                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 className="w-4 h-4" />
+                    100% Conciliado
+                  </span>
+                )}
+              </div>
             </div>
 
-            <div className="divide-y divide-slate-100 dark:divide-slate-800/80 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between text-xs text-slate-500 px-1">
+              <span>{reconciliationItems.length} transações no extrato</span>
+              <div className="flex items-center gap-3">
+                <span className="text-emerald-600 font-semibold">
+                  {reconciliationItems.filter((i) => i.status === 'matched').length} conciliadas
+                </span>
+                <button
+                  onClick={() => setReconciliationItems([])}
+                  className="text-slate-400 hover:text-rose-500 underline text-[11px]"
+                >
+                  Fechar Extrato
+                </button>
+              </div>
+            </div>
+
+            <div className="divide-y divide-slate-100 dark:divide-slate-800/80 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden max-h-96 overflow-y-auto">
               {reconciliationItems.map((item) => {
                 const isMatched = item.status === 'matched';
                 return (

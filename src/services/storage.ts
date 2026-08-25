@@ -224,63 +224,228 @@ export const storageService = {
     document.body.removeChild(link);
   },
 
-  // Parse OFX / Bank Statement file
-  parseOFX(content: string): BankReconciliationItem[] {
+  // Parse OFX / CSV Bank Statement with universal bank support
+  parseOFX(content: string, fileName?: string): BankReconciliationItem[] {
     const items: BankReconciliationItem[] = [];
-    // Basic OFX XML/SGML tag parser
-    const stmtTrnRegex = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi;
-    let match;
+    const isOFX =
+      (fileName && fileName.toLowerCase().endsWith('.ofx')) ||
+      content.includes('<OFX>') ||
+      content.includes('<STMTTRN>') ||
+      content.includes('<BANKTRANLIST>') ||
+      content.includes('OFXHEADER');
 
-    while ((match = stmtTrnRegex.exec(content)) !== null) {
-      const block = match[1];
-      const trntype = (block.match(/<TRNTYPE>([^<\r\n]+)/i)?.[1] || 'OTHER').trim();
-      const dtposted = (block.match(/<DTPOSTED>([^<\r\n]+)/i)?.[1] || '').trim();
-      const trnamt = parseFloat((block.match(/<TRNAMT>([^<\r\n]+)/i)?.[1] || '0').trim());
-      const fitid = (block.match(/<FITID>([^<\r\n]+)/i)?.[1] || Math.random().toString(36).substring(7)).trim();
-      const memo = (block.match(/<MEMO>([^<\r\n]+)/i)?.[1] || block.match(/<NAME>([^<\r\n]+)/i)?.[1] || 'Lançamento Extrato').trim();
+    if (isOFX) {
+      // Handle both XML closed tags <STMTTRN>...</STMTTRN> and SGML open tags <STMTTRN>
+      const rawBlocks = content.split(/<STMTTRN>/i);
 
-      // Format date YYYYMMDD to YYYY-MM-DD
-      let date = new Date().toISOString().split('T')[0];
-      if (dtposted.length >= 8) {
-        date = `${dtposted.substring(0, 4)}-${dtposted.substring(4, 6)}-${dtposted.substring(6, 8)}`;
+      for (let i = 1; i < rawBlocks.length; i++) {
+        const block = rawBlocks[i];
+        const cleanBlock = block.split(/<\/STMTTRN>|<BANKTRANLIST>|<\/BANKTRANLIST>/i)[0];
+
+        const trntype = (cleanBlock.match(/<TRNTYPE>([^<\r\n]+)/i)?.[1] || 'OTHER').trim().toUpperCase();
+        const dtposted = (cleanBlock.match(/<DTPOSTED>([^<\r\n]+)/i)?.[1] || '').trim();
+        const trnamtStr = (cleanBlock.match(/<TRNAMT>([^<\r\n]+)/i)?.[1] || '0').trim();
+        const fitid = (cleanBlock.match(/<FITID>([^<\r\n]+)/i)?.[1] || `fit-${Date.now()}-${i}`).trim();
+        const memo = (
+          cleanBlock.match(/<MEMO>([^<\r\n]+)/i)?.[1] ||
+          cleanBlock.match(/<NAME>([^<\r\n]+)/i)?.[1] ||
+          cleanBlock.match(/<CHECKNUM>([^<\r\n]+)/i)?.[1] ||
+          'Lançamento Bancário'
+        ).trim();
+
+        const normalizedAmt = trnamtStr.replace(',', '.');
+        const trnamt = parseFloat(normalizedAmt);
+        if (isNaN(trnamt)) continue;
+
+        let date = new Date().toISOString().split('T')[0];
+        const dateDigits = dtposted.replace(/\D/g, '');
+        if (dateDigits.length >= 8) {
+          const y = dateDigits.substring(0, 4);
+          const m = dateDigits.substring(4, 6);
+          const d = dateDigits.substring(6, 8);
+          date = `${y}-${m}-${d}`;
+        }
+
+        const isDebit = trnamt < 0 || trntype === 'DEBIT' || trntype === 'PAYMENT' || trntype === 'FEE' || trntype === 'SRVCHG' || trntype === 'POS';
+
+        items.push({
+          id: `ofx-${fitid.replace(/[^a-zA-Z0-9_-]/g, '_')}-${i}`,
+          fitid,
+          date,
+          description: memo,
+          amount: Math.round(Math.abs(trnamt) * 100) / 100,
+          type: isDebit ? 'DEBIT' : 'CREDIT',
+          status: 'unmatched',
+        });
+      }
+      return items;
+    }
+
+    // CSV Statement Parser (Nubank, Itaú, Bradesco, Santander, Inter, BB, Caixa, etc.)
+    const lines = content.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    if (lines.length === 0) return [];
+
+    // Detect Delimiter
+    const sample = lines.slice(0, 5).join('\n');
+    const countSemicolons = (sample.match(/;/g) || []).length;
+    const countTabs = (sample.match(/\t/g) || []).length;
+    const countCommas = (sample.match(/,/g) || []).length;
+
+    let delimiter = ';';
+    if (countTabs > countSemicolons && countTabs > countCommas) {
+      delimiter = '\t';
+    } else if (countCommas > countSemicolons) {
+      delimiter = ',';
+    }
+
+    // Helper for RFC 4180 CSV splitting
+    const parseLine = (line: string): string[] => {
+      const res: string[] = [];
+      let cur = '';
+      let inQuotes = false;
+      for (let j = 0; j < line.length; j++) {
+        const ch = line[j];
+        if (ch === '"') {
+          inQuotes = !inQuotes;
+        } else if (ch === delimiter && !inQuotes) {
+          res.push(cur.trim());
+          cur = '';
+        } else {
+          cur += ch;
+        }
+      }
+      res.push(cur.trim());
+      return res;
+    };
+
+    // Helper for Brazilian date parsing
+    const parseDate = (raw: string): string => {
+      if (!raw) return new Date().toISOString().split('T')[0];
+      const cl = raw.trim().replace(/^["']|["']$/g, '');
+      if (cl.includes('/')) {
+        const p = cl.split('/');
+        if (p.length === 3) {
+          const d = p[0].padStart(2, '0');
+          const m = p[1].padStart(2, '0');
+          let y = p[2].split(' ')[0];
+          if (y.length === 2) y = `20${y}`;
+          return `${y}-${m}-${d}`;
+        }
+      }
+      if (cl.includes('-')) {
+        const p = cl.split('-');
+        if (p.length === 3) {
+          if (p[0].length === 4) return `${p[0]}-${p[1].padStart(2, '0')}-${p[2].substring(0, 2).padStart(2, '0')}`;
+          return `${p[2].substring(0, 4)}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+        }
+      }
+      const num = cl.replace(/\D/g, '');
+      if (num.length >= 8) return `${num.substring(0, 4)}-${num.substring(4, 6)}-${num.substring(6, 8)}`;
+      return new Date().toISOString().split('T')[0];
+    };
+
+    // Helper for Brazilian amount parsing
+    const parseAmount = (raw: string): { amount: number; isNegative: boolean } => {
+      if (!raw) return { amount: 0, isNegative: false };
+      let s = raw.trim().toUpperCase();
+      const isNeg = s.includes('-') || s.startsWith('(') || s.endsWith(' D') || s.includes('DÉBITO') || s.includes('DEBITO');
+      s = s.replace(/[R$()CD\s]/g, '').trim();
+
+      if (s.includes(',') && s.includes('.')) {
+        if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+          s = s.replace(/\./g, '').replace(',', '.');
+        } else {
+          s = s.replace(/,/g, '');
+        }
+      } else if (s.includes(',')) {
+        s = s.replace(',', '.');
       }
 
-      items.push({
-        id: `ofx-${fitid}`,
-        fitid,
-        date,
-        description: memo,
-        amount: Math.abs(trnamt),
-        type: trnamt < 0 || trntype === 'DEBIT' ? 'DEBIT' : 'CREDIT',
-        status: 'unmatched',
-      });
+      const num = Math.abs(parseFloat(s) || 0);
+      return { amount: num, isNegative: isNeg };
+    };
+
+    // Detect Header
+    let headerIndex = -1;
+    let dateCol = -1;
+    let descCol = -1;
+    let amountCol = -1;
+    let debitCol = -1;
+    let creditCol = -1;
+    let docCol = -1;
+
+    for (let i = 0; i < Math.min(10, lines.length); i++) {
+      const cols = parseLine(lines[i]).map((c) =>
+        c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+      );
+
+      for (let c = 0; c < cols.length; c++) {
+        const col = cols[c];
+        if (['data', 'date', 'dt', 'data lancamento', 'data movimento'].some((k) => col.includes(k))) dateCol = c;
+        if (['descricao', 'historico', 'memo', 'lancamento', 'identificador', 'detalhe', 'titulo'].some((k) => col.includes(k))) descCol = c;
+        if (['valor', 'amount', 'quantia', 'valor (r$)', 'val.'].some((k) => col === k || col.includes('valor'))) amountCol = c;
+        if (['debito', 'saida', 'saidas', 'debitos', 'pagamento'].some((k) => col.includes(k))) debitCol = c;
+        if (['credito', 'entrada', 'entradas', 'creditos', 'recebimento'].some((k) => col.includes(k))) creditCol = c;
+        if (['documento', 'doc', 'num doc', 'nro doc', 'docto'].some((k) => col.includes(k))) docCol = c;
+      }
+
+      if (dateCol !== -1 && (amountCol !== -1 || (debitCol !== -1 && creditCol !== -1))) {
+        headerIndex = i;
+        break;
+      }
     }
 
-    // Fallback parser if CSV statement format
-    if (items.length === 0 && (content.includes(';') || content.includes(','))) {
-      const lines = content.split(/\r?\n/);
-      lines.slice(1).forEach((line, idx) => {
-        if (!line.trim()) return;
-        const parts = line.split(/[;,]/);
-        if (parts.length >= 3) {
-          const rawDate = parts[0]?.trim();
-          const desc = parts[1]?.trim().replace(/"/g, '') || 'Lançamento';
-          const rawAmount = parseFloat(parts[2]?.trim().replace('R$', '').replace('.', '').replace(',', '.') || '0');
-          
-          if (!isNaN(rawAmount) && rawAmount !== 0) {
-            items.push({
-              id: `csv-${idx}-${Date.now()}`,
-              fitid: `csv-${idx}`,
-              date: rawDate.includes('/') ? rawDate.split('/').reverse().join('-') : rawDate,
-              description: desc,
-              amount: Math.abs(rawAmount),
-              type: rawAmount < 0 ? 'DEBIT' : 'CREDIT',
-              status: 'unmatched',
-            });
-          }
-        }
-      });
+    if (headerIndex === -1) {
+      headerIndex = 0;
+      dateCol = 0;
+      descCol = 1;
+      amountCol = 2;
+    } else if (descCol === -1) {
+      descCol = dateCol === 0 ? 1 : 0;
     }
+
+    const dataRows = lines.slice(headerIndex + 1);
+    dataRows.forEach((line, idx) => {
+      if (!line.trim()) return;
+      const parts = parseLine(line);
+      if (parts.length <= Math.max(dateCol, amountCol !== -1 ? amountCol : debitCol)) return;
+
+      const rawDate = parts[dateCol] || '';
+      const date = parseDate(rawDate);
+      const desc = (parts[descCol] || 'Lançamento Extrato').replace(/^["']|["']$/g, '').trim();
+      const docNum = docCol !== -1 ? parts[docCol] : undefined;
+
+      let amount = 0;
+      let isDebit = false;
+
+      if (amountCol !== -1) {
+        const parsed = parseAmount(parts[amountCol] || '0');
+        amount = parsed.amount;
+        isDebit = parsed.isNegative;
+      } else if (debitCol !== -1 && creditCol !== -1) {
+        const debitParsed = parseAmount(parts[debitCol] || '0');
+        const creditParsed = parseAmount(parts[creditCol] || '0');
+        if (debitParsed.amount > 0) {
+          amount = debitParsed.amount;
+          isDebit = true;
+        } else if (creditParsed.amount > 0) {
+          amount = creditParsed.amount;
+          isDebit = false;
+        }
+      }
+
+      if (amount > 0) {
+        items.push({
+          id: `csv-${Date.now()}-${idx}`,
+          fitid: docNum || `csv-${idx + 1}`,
+          date,
+          description: desc,
+          amount: Math.round(amount * 100) / 100,
+          type: isDebit ? 'DEBIT' : 'CREDIT',
+          status: 'unmatched',
+        });
+      }
+    });
 
     return items;
   },
