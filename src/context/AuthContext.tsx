@@ -166,6 +166,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         loadUserData(session.user).finally(() => setIsLoading(false));
       } else {
+        const localOrg = getInitialOrganization();
+        setOrganization(localOrg);
+        setProfile({
+          id: 'user-guest',
+          email: 'gestor@prosper.com.br',
+          fullName: 'Gestor PROSPER',
+          role: 'admin',
+          organizationId: localOrg.id,
+          organization: localOrg,
+        });
         setIsLoading(false);
       }
     });
@@ -177,8 +187,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         loadUserData(session.user).finally(() => setIsLoading(false));
       } else {
-        setOrganization(null);
-        setProfile(null);
+        const localOrg = getInitialOrganization();
+        setOrganization(localOrg);
+        setProfile({
+          id: 'user-guest',
+          email: 'gestor@prosper.com.br',
+          fullName: 'Gestor PROSPER',
+          role: 'admin',
+          organizationId: localOrg.id,
+          organization: localOrg,
+        });
         setIsLoading(false);
       }
     });
