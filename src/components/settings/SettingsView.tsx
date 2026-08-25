@@ -56,7 +56,12 @@ export const SettingsView: React.FC = () => {
   };
 
   const planName = organization?.plan ? organization.plan.toUpperCase() : 'PRO';
-  const isTrial = organization?.subscriptionStatus === 'trialing' || !organization;
+  const isTrial = organization?.subscriptionStatus === 'trialing';
+  let remainingDays = 14;
+  if (organization?.trialEndsAt) {
+    const diffMs = new Date(organization.trialEndsAt).getTime() - Date.now();
+    remainingDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+  }
 
   return (
     <div className="max-w-4xl space-y-6 animate-fade-in pb-16">
@@ -83,8 +88,18 @@ export const SettingsView: React.FC = () => {
                 <h4 className="text-base font-bold text-white leading-tight">
                   Plano PROSPER {planName}
                 </h4>
-                <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30">
-                  {isTrial ? 'Período de Testes (14 dias)' : 'Assinatura Ativa'}
+                <span
+                  className={`px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-full border ${
+                    isTrial
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  }`}
+                >
+                  {isTrial
+                    ? remainingDays > 0
+                      ? `Período de Testes (${remainingDays} dias restantes)`
+                      : 'Período de Testes Expirado'
+                    : 'Assinatura Ativa'}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">

@@ -19,16 +19,93 @@ interface AuthContextType {
   ) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  updateSubscription: (
+    plan: 'starter' | 'pro' | 'business',
+    status?: 'active' | 'trialing',
+    trialDays?: number
+  ) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const LOCAL_SUB_KEY = 'prosper_subscription_v1';
+const LEGACY_SUB_KEY = 'fincore_subscription_v1';
+
+const getInitialOrganization = (): Organization => {
+  try {
+    const stored = localStorage.getItem(LOCAL_SUB_KEY) || localStorage.getItem(LEGACY_SUB_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error('Error parsing stored subscription:', e);
+  }
+
+  // Default: 14 days trial of Pro plan
+  const trialEnds = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const defaultOrg: Organization = {
+    id: 'org-prosper-main',
+    name: 'PROSPER Soluções Empresariais',
+    plan: 'pro',
+    subscriptionStatus: 'trialing',
+    trialEndsAt: trialEnds,
+    createdAt: new Date().toISOString(),
+  };
+  localStorage.setItem(LOCAL_SUB_KEY, JSON.stringify(defaultOrg));
+  return defaultOrg;
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<AuthUserProfile | null>(null);
-  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [organization, setOrganization] = useState<Organization | null>(getInitialOrganization);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Update subscription locally and remotely
+  const updateSubscription = (
+    plan: 'starter' | 'pro' | 'business',
+    status: 'active' | 'trialing' = 'active',
+    trialDays?: number
+  ) => {
+    setOrganization((prev) => {
+      const trialEndsAt =
+        status === 'trialing'
+          ? trialDays !== undefined
+            ? new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString()
+            : prev?.trialEndsAt || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+          : undefined;
+
+      const updated: Organization = {
+        id: prev?.id || 'org-prosper-main',
+        name: prev?.name || 'PROSPER Soluções Empresariais',
+        tradeName: prev?.tradeName || 'PROSPER',
+        document: prev?.document,
+        plan,
+        subscriptionStatus: status,
+        trialEndsAt,
+        createdAt: prev?.createdAt || new Date().toISOString(),
+      };
+
+      localStorage.setItem(LOCAL_SUB_KEY, JSON.stringify(updated));
+
+      // Also update Supabase if connected
+      if (prev?.id && prev.id !== 'org-prosper-main' && prev.id !== 'org-default') {
+        supabase
+          .from('organizations')
+          .update({
+            plan,
+            subscription_status: status,
+          })
+          .eq('id', prev.id)
+          .then(({ error }) => {
+            if (error) console.warn('Could not sync subscription to Supabase:', error);
+          });
+      }
+
+      return updated;
+    });
+  };
 
   // Fetch organization and member profile
   const loadUserData = async (currentUser: User) => {
@@ -48,12 +125,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: org.name,
           tradeName: org.trade_name,
           document: org.document,
-          plan: org.plan || 'starter',
+          plan: org.plan || 'pro',
           subscriptionStatus: org.subscription_status || 'trialing',
           createdAt: org.created_at,
         };
 
         setOrganization(orgObj);
+        localStorage.setItem(LOCAL_SUB_KEY, JSON.stringify(orgObj));
         setProfile({
           id: currentUser.id,
           email: currentUser.email || '',
@@ -63,21 +141,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           organization: orgObj,
         });
       } else {
-        // Fallback default organization
-        const fallbackOrg: Organization = {
-          id: 'org-default',
-          name: currentUser.user_metadata?.company_name || 'Minha Empresa',
-          plan: 'starter',
-          subscriptionStatus: 'trialing',
-        };
-        setOrganization(fallbackOrg);
+        // Fallback default organization from local state
+        const localOrg = getInitialOrganization();
+        setOrganization(localOrg);
         setProfile({
           id: currentUser.id,
           email: currentUser.email || '',
           fullName: currentUser.user_metadata?.full_name || 'Gestor',
           role: 'admin',
-          organizationId: 'org-default',
-          organization: fallbackOrg,
+          organizationId: localOrg.id,
+          organization: localOrg,
         });
       }
     } catch (err) {

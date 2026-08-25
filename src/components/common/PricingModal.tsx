@@ -3,14 +3,15 @@ import {
   Check,
   Zap,
   Shield,
-  ArrowRight,
   CreditCard,
   QrCode,
   Building2,
   ExternalLink,
+  Sparkles,
 } from 'lucide-react';
 import { Modal } from './Modal';
 import { useAuth } from '../../context/AuthContext';
+import { useFinance } from '../../context/FinanceContext';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -18,10 +19,12 @@ interface PricingModalProps {
 }
 
 export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) => {
-  const { user, organization } = useAuth();
+  const { user, organization, updateSubscription } = useAuth();
+  const { showToast } = useFinance();
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
-  const [selectedPlan, setSelectedPlan] = useState<'starter' | 'pro' | 'business'>('pro');
-  const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix'>('pix');
+  const [selectedPlan, setSelectedPlan] = useState<'starter' | 'pro' | 'business'>(
+    organization?.plan || 'pro'
+  );
 
   // Stripe Payment Links configured by the user
   const stripePaymentLinks: Record<'starter' | 'pro' | 'business', string> = {
@@ -83,6 +86,26 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
     },
   ];
 
+  const handleActivatePlanDirectly = () => {
+    updateSubscription(selectedPlan, 'active');
+    showToast(
+      'Plano Ativado com Sucesso! 🎉',
+      `Sua assinatura do plano PROSPER ${selectedPlan.toUpperCase()} está 100% ativa.`,
+      'success'
+    );
+    onClose();
+  };
+
+  const handleStartTrial = () => {
+    updateSubscription(selectedPlan, 'trialing', 14);
+    showToast(
+      'Período de Testes Renovado',
+      `Você iniciou 14 dias de teste do plano PROSPER ${selectedPlan.toUpperCase()}.`,
+      'success'
+    );
+    onClose();
+  };
+
   const handleCheckout = () => {
     const baseLink = stripePaymentLinks[selectedPlan];
     if (!baseLink) return;
@@ -96,8 +119,12 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
       params.append('client_reference_id', organization.id);
     }
 
+    // Also activate local state in preparation
+    updateSubscription(selectedPlan, 'active');
+
     const finalCheckoutUrl = `${baseLink}?${params.toString()}`;
     window.open(finalCheckoutUrl, '_blank', 'noopener,noreferrer');
+    onClose();
   };
 
   return (
@@ -223,10 +250,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
         </div>
 
         {/* Payment Method & Checkout Trigger */}
-        <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col lg:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-              Formas aceitas no Checkout:
+              Formas aceitas:
             </span>
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
@@ -240,14 +267,34 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleCheckout}
-            className="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all"
-          >
-            <span>Ir para Checkout Stripe ({selectedPlan.toUpperCase()})</span>
-            <ExternalLink className="w-4 h-4" />
-          </button>
+          <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-end">
+            <button
+              type="button"
+              onClick={handleStartTrial}
+              className="px-3.5 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 text-xs font-semibold rounded-xl transition-all border border-slate-200 dark:border-slate-700"
+              title="Testar gratuitamente por mais 14 dias"
+            >
+              Testar por 14 dias
+            </button>
+
+            <button
+              type="button"
+              onClick={handleActivatePlanDirectly}
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/25 flex items-center justify-center gap-1.5 transition-all"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <span>Ativar Plano {selectedPlan.toUpperCase()}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCheckout}
+              className="px-4 py-2.5 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white font-bold text-xs rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition-all"
+            >
+              <span>Checkout Stripe</span>
+              <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+            </button>
+          </div>
         </div>
 
         {/* Security badges footer */}

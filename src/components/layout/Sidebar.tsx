@@ -170,25 +170,72 @@ export const Sidebar: React.FC = () => {
           })}
         </nav>
 
-        {/* Trial & Upgrade Banner */}
-        <div className="p-3.5 mx-3 mb-3 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-teal-500/10 border border-emerald-500/20 rounded-2xl">
-          <div className="flex items-center gap-2">
-            <Crown className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100">
-              Plano Pro (14d Teste)
-            </span>
-          </div>
-          <p className="text-[10px] text-slate-400 mt-1">
-            Acesso a todas as funcionalidades corporativas e DRE.
-          </p>
-          <button
-            onClick={() => setIsPricingModalOpen(true)}
-            className="w-full mt-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] rounded-lg shadow-sm transition-all flex items-center justify-center gap-1"
-          >
-            <Zap className="w-3 h-3 text-amber-300 fill-amber-300" />
-            <span>Assinar Plano</span>
-          </button>
-        </div>
+        {/* Dynamic Plan & Upgrade Banner */}
+        {(() => {
+          const currentPlan = organization?.plan || 'pro';
+          const isTrial = organization?.subscriptionStatus === 'trialing';
+          const planNameFormatted =
+            currentPlan === 'business' ? 'Business' : currentPlan === 'starter' ? 'Starter' : 'Pro';
+
+          let remainingDays = 14;
+          if (organization?.trialEndsAt) {
+            const diffMs = new Date(organization.trialEndsAt).getTime() - Date.now();
+            remainingDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+          }
+
+          return (
+            <div
+              className={`p-3.5 mx-3 mb-3 border rounded-2xl transition-all ${
+                isTrial
+                  ? 'bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-teal-500/10 border-emerald-500/20'
+                  : 'bg-gradient-to-br from-emerald-600/15 via-teal-600/10 to-emerald-500/15 border-emerald-500/30'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Crown className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                  <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate">
+                    Plano {planNameFormatted}
+                  </span>
+                </div>
+                <span
+                  className={`px-2 py-0.5 text-[9px] font-extrabold uppercase rounded-full tracking-wider ${
+                    isTrial
+                      ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30'
+                      : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30'
+                  }`}
+                >
+                  {isTrial ? (remainingDays > 0 ? `${remainingDays}d Teste` : 'Expirado') : 'Ativo'}
+                </span>
+              </div>
+
+              <p className="text-[10px] text-slate-400 mt-1.5 leading-tight">
+                {isTrial
+                  ? remainingDays > 0
+                    ? `${remainingDays} dias restantes de teste grátis.`
+                    : 'Seu período de testes encerrou.'
+                  : 'Acesso completo a todas as ferramentas PROSPER.'}
+              </p>
+
+              <button
+                onClick={() => setIsPricingModalOpen(true)}
+                className="w-full mt-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] rounded-lg shadow-sm transition-all flex items-center justify-center gap-1"
+              >
+                {isTrial ? (
+                  <>
+                    <Zap className="w-3 h-3 text-amber-300 fill-amber-300" />
+                    <span>Assinar Plano</span>
+                  </>
+                ) : (
+                  <>
+                    <Crown className="w-3 h-3 text-amber-300" />
+                    <span>Gerenciar Plano</span>
+                  </>
+                )}
+              </button>
+            </div>
+          );
+        })()}
 
         {/* Bottom Summary Pill */}
         <div className="p-4 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40">
