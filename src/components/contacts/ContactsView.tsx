@@ -182,7 +182,7 @@ export const ContactsView: React.FC = () => {
             Clientes & Fornecedores
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Cadastre contatos comerciais, CNPJs, dados para PIX e acompanhe o histórico de faturamento.
+            Cadastro unificado de contatos comerciais, documentos fiscais (CNPJ/CPF), chaves PIX e histórico financeiro.
           </p>
         </div>
 

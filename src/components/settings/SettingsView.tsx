@@ -64,10 +64,10 @@ export const SettingsView: React.FC = () => {
       <div className="p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
         <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <Settings className="w-5 h-5 text-emerald-500" />
-          Configurações da Empresa & Sistema
+          Configurações do Sistema
         </h3>
         <p className="text-xs text-slate-400 mt-0.5">
-          Atualize os dados corporativos que aparecem no DRE e gerencie backups e restaurações.
+          Parâmetros cadastrais da empresa, regime tributário, preferências visuais e backups de segurança.
         </p>
       </div>
 

@@ -198,10 +198,10 @@ export const CategoriesView: React.FC = () => {
         <div>
           <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <FolderTree className="w-5 h-5 text-emerald-500" />
-            Plano de Contas & Centros de Custo
+            Categorias & Centros de Custo
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Organize categorias de receitas e despesas e controle orçamentos por departamento.
+            Plano de contas gerencial, estrutura contábil para DRE e rateio departamental orçado.
           </p>
         </div>
 
@@ -216,7 +216,7 @@ export const CategoriesView: React.FC = () => {
               }`}
             >
               <FolderTree className="w-3.5 h-3.5" />
-              <span>Plano de Contas ({categories.length})</span>
+              <span>Categorias & DRE ({categories.length})</span>
             </button>
             <button
               onClick={() => setActiveTab('costCenters')}

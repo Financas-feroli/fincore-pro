@@ -134,13 +134,13 @@ export const DashboardView: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span>Cockpit Executivo & Controladoria</span>
+            <span>Dashboard Executivo</span>
             <span className="text-[10px] font-mono px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded-full font-semibold">
               Live Data
             </span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Acompanhamento em tempo real de disponibilidades, liquidez imediata e saúde financeira.
+            Cockpit de gestão financeira em tempo real, liquidez imediata e controladoria corporativa.
           </p>
         </div>
 

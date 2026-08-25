@@ -71,39 +71,39 @@ export const Header: React.FC = () => {
   const tabTitles: Record<string, { title: string; desc: string }> = {
     dashboard: {
       title: 'Dashboard Executivo',
-      desc: 'Visão holística da saúde financeira e projeções.',
+      desc: 'Cockpit de gestão financeira em tempo real, liquidez imediata e controladoria.',
     },
     transactions: {
       title: 'Lançamentos & Extrato Geral',
-      desc: 'Histórico completo de receitas, despesas e transferências.',
+      desc: 'Consulta analítica de receitas, despesas, transferências e conciliações.',
     },
     payables: {
       title: 'Contas a Pagar',
-      desc: 'Gestão de fornecedores, boletos e contas programadas.',
+      desc: 'Gestão de compromissos com fornecedores, boletos e despesas operacionais.',
     },
     receivables: {
       title: 'Contas a Receber',
-      desc: 'Previsão de recebíveis de clientes e contratos.',
+      desc: 'Previsão e liquidação de recebíveis de clientes, contratos e faturas.',
     },
     banking: {
       title: 'Gestão Bancária & Conciliação',
-      desc: 'Saldos, faturas de cartão e importação de extratos OFX/CSV.',
+      desc: 'Contas correntes, cartões corporativos, saldos em tempo real e extratos OFX/CSV.',
     },
     contacts: {
       title: 'Clientes & Fornecedores',
-      desc: 'Base de contatos e histórico financeiro consolidado.',
+      desc: 'Cadastro unificado de contatos comerciais, documentos fiscais e histórico financeiro.',
     },
     categories: {
-      title: 'Plano de Contas & Centros de Custo',
-      desc: 'Estruturação contábil e rateio departamental.',
+      title: 'Categorias & Centros de Custo',
+      desc: 'Plano de contas gerencial, estrutura para DRE e rateio departamental orçado.',
     },
     reports: {
-      title: 'Relatórios Financeiros & DRE',
-      desc: 'Demonstrativo de Resultados, Fluxo de Caixa e PDF executivo.',
+      title: 'Relatórios & DRE Gerencial',
+      desc: 'Demonstrativo de Resultados do Exercício, Previsto vs Realizado e exportação contábil.',
     },
     settings: {
-      title: 'Configurações & Backup',
-      desc: 'Dados da empresa, dados de demonstração e backups.',
+      title: 'Configurações do Sistema',
+      desc: 'Parâmetros cadastrais da empresa, regime tributário, personalização e backups.',
     },
   };
 

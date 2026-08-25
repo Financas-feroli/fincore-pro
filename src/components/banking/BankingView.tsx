@@ -271,11 +271,12 @@ export const BankingView: React.FC = () => {
       {/* Top Header Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
         <div>
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">
-            Contas Bancárias & Cartões
+          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Landmark className="w-5 h-5 text-emerald-500" />
+            Gestão Bancária & Conciliação
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            Gerencie saldos em tempo real, limites de cartões corporativos e transferências.
+            Contas correntes, cartões corporativos, saldos em tempo real e conciliação de extratos OFX/CSV.
           </p>
         </div>
 

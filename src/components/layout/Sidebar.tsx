@@ -76,7 +76,7 @@ export const Sidebar: React.FC = () => {
     },
     {
       id: 'categories',
-      label: 'Plano de Contas & Custo',
+      label: 'Categorias & Centros de Custo',
       icon: FolderTree,
     },
     {
@@ -86,7 +86,7 @@ export const Sidebar: React.FC = () => {
     },
     {
       id: 'settings',
-      label: 'Configurações & Backup',
+      label: 'Configurações do Sistema',
       icon: Settings,
     },
   ];
