@@ -29,9 +29,20 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
 
   // Selected plan state for interactive card selection
   const [selectedPlan, setSelectedPlan] = useState<'trial' | 'starter' | 'pro' | 'business'>(() => {
-    if (isTrial) return 'pro';
+    if (isTrial) return 'trial';
     return currentPlan as any;
   });
+
+  // Sync selectedPlan whenever organization updates or modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      if (isTrial) {
+        setSelectedPlan('trial');
+      } else {
+        setSelectedPlan((organization?.plan || 'pro') as any);
+      }
+    }
+  }, [isOpen, organization?.plan, isTrial]);
 
   let remainingDays = 14;
   if (organization?.trialEndsAt) {
@@ -61,6 +72,17 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
       'success'
     );
     onClose();
+  };
+
+  // Handle Plan Subscription
+  const handleSubscribePlan = (plan: 'starter' | 'pro' | 'business') => {
+    updateSubscription(plan, 'active');
+    const planName = plan === 'starter' ? 'Starter' : plan === 'pro' ? 'Pro' : 'Business';
+    showToast(
+      `Plano PROSPER ${planName} Ativado! 🚀`,
+      `Sua assinatura mensal do plano ${planName} foi atualizada com sucesso.`,
+      'success'
+    );
   };
 
   return (
@@ -282,7 +304,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                   rel="noopener noreferrer"
                   onClick={(e) => {
                     e.stopPropagation();
-                    updateSubscription('starter', 'active');
+                    handleSubscribePlan('starter');
                   }}
                   className={`w-full py-2.5 text-xs font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
                     selectedPlan === 'starter'
@@ -403,7 +425,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                   rel="noopener noreferrer"
                   onClick={(e) => {
                     e.stopPropagation();
-                    updateSubscription('pro', 'active');
+                    handleSubscribePlan('pro');
                   }}
                   className={`w-full py-2.5 text-xs font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
                     selectedPlan === 'pro'
@@ -519,7 +541,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                   rel="noopener noreferrer"
                   onClick={(e) => {
                     e.stopPropagation();
-                    updateSubscription('business', 'active');
+                    handleSubscribePlan('business');
                   }}
                   className={`w-full py-2.5 text-xs font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
                     selectedPlan === 'business'

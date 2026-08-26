@@ -30,13 +30,31 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const LOCAL_SUB_KEY = 'prosper_subscription_v1';
-const LEGACY_SUB_KEY = 'fincore_subscription_v1';
 const DEMO_SESSION_KEY = 'prosper_demo_session';
 
-const getInitialOrganization = (): Organization => {
+// Helper to get scoped subscription storage key
+export const getSubscriptionStorageKey = (
+  userId?: string | null,
+  orgId?: string | null,
+  isDemo?: boolean
+): string => {
+  if (isDemo) return 'prosper_sub_demo';
+  if (userId) return `prosper_sub_${userId}`;
+  if (orgId && orgId !== 'org-prosper-main' && orgId !== 'org-default') {
+    return `prosper_sub_${orgId}`;
+  }
+  return 'prosper_sub_guest';
+};
+
+// Helper to get or initialize stored organization
+const getStoredOrganization = (
+  userId?: string | null,
+  orgId?: string | null,
+  isDemo?: boolean
+): Organization => {
+  const key = getSubscriptionStorageKey(userId, orgId, isDemo);
   try {
-    const stored = localStorage.getItem(LOCAL_SUB_KEY) || localStorage.getItem(LEGACY_SUB_KEY);
+    const stored = localStorage.getItem(key);
     if (stored) {
       return JSON.parse(stored);
     }
@@ -44,17 +62,34 @@ const getInitialOrganization = (): Organization => {
     console.error('Error parsing stored subscription:', e);
   }
 
-  // Default: 14 days trial of Pro plan
+  // Demo account default (14 days trial of Pro)
+  if (isDemo) {
+    const trialEnds = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+    const demoOrg: Organization = {
+      id: 'org-prosper-demo',
+      name: 'PROSPER Soluções (Modo Teste)',
+      tradeName: 'PROSPER Teste',
+      plan: 'pro',
+      subscriptionStatus: 'trialing',
+      trialEndsAt: trialEnds,
+      createdAt: new Date().toISOString(),
+    };
+    localStorage.setItem(key, JSON.stringify(demoOrg));
+    return demoOrg;
+  }
+
+  // Real user default
   const trialEnds = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
   const defaultOrg: Organization = {
-    id: 'org-prosper-main',
+    id: orgId || (userId ? `org-${userId}` : 'org-prosper-main'),
     name: 'PROSPER Soluções Empresariais',
+    tradeName: 'PROSPER',
     plan: 'pro',
     subscriptionStatus: 'trialing',
     trialEndsAt: trialEnds,
     createdAt: new Date().toISOString(),
   };
-  localStorage.setItem(LOCAL_SUB_KEY, JSON.stringify(defaultOrg));
+  localStorage.setItem(key, JSON.stringify(defaultOrg));
   return defaultOrg;
 };
 
@@ -62,9 +97,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<AuthUserProfile | null>(null);
-  const [organization, setOrganization] = useState<Organization | null>(getInitialOrganization);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
     return sessionStorage.getItem(DEMO_SESSION_KEY) === 'true';
+  });
+  const [organization, setOrganization] = useState<Organization | null>(() => {
+    const isDemo = sessionStorage.getItem(DEMO_SESSION_KEY) === 'true';
+    return getStoredOrganization(null, null, isDemo);
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -72,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const enterDemoMode = () => {
     setIsDemoMode(true);
     sessionStorage.setItem(DEMO_SESSION_KEY, 'true');
-    const demoOrg = getInitialOrganization();
+    const demoOrg = getStoredOrganization('demo-user', 'org-prosper-demo', true);
     setOrganization(demoOrg);
     setProfile({
       id: 'demo-user',
@@ -84,13 +122,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  // Update subscription locally and remotely
+  // Update subscription locally per user and remotely on Supabase
   const updateSubscription = (
     plan: 'starter' | 'pro' | 'business',
     status: 'active' | 'trialing' = 'active',
     trialDays?: number
   ) => {
     setOrganization((prev) => {
+      const currentOrgId = prev?.id;
+      const currentUserId = user?.id;
+      const key = getSubscriptionStorageKey(currentUserId, currentOrgId, isDemoMode);
+
       const trialEndsAt =
         status === 'trialing'
           ? trialDays !== undefined
@@ -99,7 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           : undefined;
 
       const updated: Organization = {
-        id: prev?.id || 'org-prosper-main',
+        id: prev?.id || (currentUserId ? `org-${currentUserId}` : 'org-prosper-main'),
         name: prev?.name || 'PROSPER Soluções Empresariais',
         tradeName: prev?.tradeName || 'PROSPER',
         document: prev?.document,
@@ -109,10 +151,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         createdAt: prev?.createdAt || new Date().toISOString(),
       };
 
-      localStorage.setItem(LOCAL_SUB_KEY, JSON.stringify(updated));
+      localStorage.setItem(key, JSON.stringify(updated));
 
-      // Also update Supabase if connected
-      if (prev?.id && prev.id !== 'org-prosper-main' && prev.id !== 'org-default') {
+      // Also update Supabase if connected to a real organization
+      if (
+        prev?.id &&
+        prev.id !== 'org-prosper-main' &&
+        prev.id !== 'org-default' &&
+        prev.id !== 'org-prosper-demo'
+      ) {
         supabase
           .from('organizations')
           .update({
@@ -129,11 +176,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  // Fetch organization and member profile
+  // Fetch organization and member profile for a logged-in user
   const loadUserData = async (currentUser: User) => {
     try {
-      // 1. Get member record
-      const { data: memberData, error: memberError } = await supabase
+      const key = getSubscriptionStorageKey(currentUser.id, null, false);
+      let localOrg: Organization | null = null;
+      try {
+        const stored = localStorage.getItem(key);
+        if (stored) localOrg = JSON.parse(stored);
+      } catch (e) {
+        console.error('Error loading local subscription:', e);
+      }
+
+      // Query Supabase for organization membership
+      const { data: memberData } = await supabase
         .from('organization_members')
         .select('*, organizations(*)')
         .eq('user_id', currentUser.id)
@@ -144,16 +200,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const org = memberData.organizations;
         const orgObj: Organization = {
           id: org.id,
-          name: org.name,
-          tradeName: org.trade_name,
-          document: org.document,
-          plan: org.plan || 'pro',
-          subscriptionStatus: org.subscription_status || 'trialing',
+          name: org.name || currentUser.user_metadata?.company_name || 'Minha Empresa',
+          tradeName: org.trade_name || currentUser.user_metadata?.company_name || 'Minha Empresa',
+          document: org.document || currentUser.user_metadata?.document,
+          plan: localOrg?.plan || org.plan || 'pro',
+          subscriptionStatus: localOrg?.subscriptionStatus || org.subscription_status || 'trialing',
+          trialEndsAt: localOrg?.trialEndsAt,
           createdAt: org.created_at,
         };
 
         setOrganization(orgObj);
-        localStorage.setItem(LOCAL_SUB_KEY, JSON.stringify(orgObj));
+        localStorage.setItem(key, JSON.stringify(orgObj));
         setProfile({
           id: currentUser.id,
           email: currentUser.email || '',
@@ -163,20 +220,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           organization: orgObj,
         });
       } else {
-        // Fallback default organization from local state
-        const localOrg = getInitialOrganization();
-        setOrganization(localOrg);
+        // Fallback user-scoped organization
+        const userOrg = localOrg || getStoredOrganization(currentUser.id, null, false);
+        setOrganization(userOrg);
         setProfile({
           id: currentUser.id,
           email: currentUser.email || '',
           fullName: currentUser.user_metadata?.full_name || 'Gestor',
           role: 'admin',
-          organizationId: localOrg.id,
-          organization: localOrg,
+          organizationId: userOrg.id,
+          organization: userOrg,
         });
       }
     } catch (err) {
       console.warn('Error loading user organization:', err);
+      const userOrg = getStoredOrganization(currentUser.id, null, false);
+      setOrganization(userOrg);
+      setProfile({
+        id: currentUser.id,
+        email: currentUser.email || '',
+        fullName: currentUser.user_metadata?.full_name || 'Gestor',
+        role: 'admin',
+        organizationId: userOrg.id,
+        organization: userOrg,
+      });
     }
   };
 
@@ -186,39 +253,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        setIsDemoMode(false);
+        sessionStorage.removeItem(DEMO_SESSION_KEY);
         loadUserData(session.user).finally(() => setIsLoading(false));
       } else {
-        const localOrg = getInitialOrganization();
-        setOrganization(localOrg);
-        setProfile({
-          id: 'user-guest',
-          email: 'gestor@prosper.com.br',
-          fullName: 'Gestor PROSPER',
-          role: 'admin',
-          organizationId: localOrg.id,
-          organization: localOrg,
-        });
+        const isDemo = sessionStorage.getItem(DEMO_SESSION_KEY) === 'true';
+        if (isDemo) {
+          enterDemoMode();
+        } else {
+          const guestOrg = getStoredOrganization(null, null, false);
+          setOrganization(guestOrg);
+          setProfile(null);
+        }
         setIsLoading(false);
       }
     });
 
     // 2. Listen to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        setIsDemoMode(false);
+        sessionStorage.removeItem(DEMO_SESSION_KEY);
         loadUserData(session.user).finally(() => setIsLoading(false));
       } else {
-        const localOrg = getInitialOrganization();
-        setOrganization(localOrg);
-        setProfile({
-          id: 'user-guest',
-          email: 'gestor@prosper.com.br',
-          fullName: 'Gestor PROSPER',
-          role: 'admin',
-          organizationId: localOrg.id,
-          organization: localOrg,
-        });
+        const isDemo = sessionStorage.getItem(DEMO_SESSION_KEY) === 'true';
+        if (isDemo) {
+          enterDemoMode();
+        } else {
+          const guestOrg = getStoredOrganization(null, null, false);
+          setOrganization(guestOrg);
+          setProfile(null);
+        }
         setIsLoading(false);
       }
     });
@@ -231,6 +300,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sign In
   const signIn = async (email: string, password: string) => {
     try {
+      setIsDemoMode(false);
+      sessionStorage.removeItem(DEMO_SESSION_KEY);
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -255,6 +327,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     document: string
   ) => {
     try {
+      setIsDemoMode(false);
+      sessionStorage.removeItem(DEMO_SESSION_KEY);
+
       // 1. Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -273,14 +348,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const userId = authData.user.id;
 
-      // 2. Insert new organization
+      // 2. Insert new organization (14-day trial of Pro)
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
         .insert({
           name: companyName,
           trade_name: companyName,
           document: document,
-          plan: 'starter',
+          plan: 'pro',
           subscription_status: 'trialing',
         })
         .select()
@@ -320,6 +395,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ]);
       }
 
+      // Initialize user-scoped storage key
+      getStoredOrganization(userId, orgData?.id, false);
+
       return { error: null };
     } catch (err: any) {
       return { error: err };
@@ -338,6 +416,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setSession(null);
     setProfile(null);
+    const guestOrg = getStoredOrganization(null, null, false);
+    setOrganization(guestOrg);
   };
 
   // Reset Password
