@@ -153,6 +153,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       localStorage.setItem(key, JSON.stringify(updated));
 
+      setProfile((prevProf) => {
+        if (!prevProf) return null;
+        return {
+          ...prevProf,
+          organization: updated,
+        };
+      });
+
       // Also update Supabase if connected to a real organization
       if (
         prev?.id &&

@@ -106,12 +106,16 @@ export const SettingsView: React.FC = () => {
                 </h4>
                 <span
                   className={`px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-full border ${
-                    isTrial
+                    isDemoMode
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                      : isTrial
                       ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
                       : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
                   }`}
                 >
-                  {isTrial
+                  {isDemoMode
+                    ? 'Modo Demonstração (Test Drive)'
+                    : isTrial
                     ? remainingDays > 0
                       ? `Período de Testes (${remainingDays} dias restantes)`
                       : 'Período de Testes Expirado'
@@ -119,7 +123,7 @@ export const SettingsView: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Organização: <strong>{organization?.name || formProfile.name}</strong> • Banco em Nuvem Ativo
+                Organização: <strong>{isDemoMode ? 'PROSPER Soluções (Modo Teste)' : organization?.name || formProfile.name}</strong> • {isDemoMode ? 'Conta de Teste' : profile?.email || user?.email || 'Banco em Nuvem Ativo'}
               </p>
             </div>
           </div>

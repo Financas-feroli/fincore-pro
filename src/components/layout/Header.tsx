@@ -288,7 +288,7 @@ export const Header: React.FC = () => {
         </button>
 
         {/* User Profile & Logout Menu */}
-        <div className="relative pl-1 border-l border-slate-200 dark:border-slate-800">
+        <div className="relative pl-2 border-l border-slate-200 dark:border-slate-800 flex items-center gap-2">
           <button
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
             className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -296,12 +296,20 @@ export const Header: React.FC = () => {
             <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">
               {userInitial}
             </div>
+            <div className="hidden lg:block text-left">
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-none truncate max-w-[120px]">
+                {isDemoMode ? 'Conta Teste' : profile?.fullName || user?.email?.split('@')[0] || 'Gestor'}
+              </p>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold leading-none">
+                Plano {(organization?.plan || 'pro').toUpperCase()} {isDemoMode ? '(Demo)' : organization?.subscriptionStatus === 'active' ? '(Ativo)' : '(Teste)'}
+              </span>
+            </div>
           </button>
 
           {isUserMenuOpen && (
             <>
               <div className="fixed inset-0 z-20" onClick={() => setIsUserMenuOpen(false)} />
-              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-30 py-2 animate-fade-in">
+              <div className="absolute right-0 mt-2 top-full w-64 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-30 py-2 animate-fade-in">
                 <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
@@ -318,7 +326,13 @@ export const Header: React.FC = () => {
                   </p>
                   <div className="flex items-center gap-1.5 mt-2 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 w-fit">
                     <Building className="w-3 h-3" />
-                    <span className="truncate">{organization?.name || 'PROSPER Soluções'}</span>
+                    <span className="truncate">{isDemoMode ? 'PROSPER Soluções (Modo Teste)' : organization?.name || 'PROSPER Soluções'}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[10px]">
+                    <span className="text-slate-400">Plano Atual:</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 uppercase">
+                      {organization?.plan || 'PRO'} • {isDemoMode ? 'Demo' : organization?.subscriptionStatus === 'active' ? 'Ativo' : 'Teste'}
+                    </span>
                   </div>
                 </div>
 
