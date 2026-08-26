@@ -39,6 +39,10 @@ export const SettingsView: React.FC = () => {
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
 
+  useEffect(() => {
+    setFormProfile(companyProfile);
+  }, [companyProfile]);
+
   const handleSubmitCompany = (e: React.FormEvent) => {
     e.preventDefault();
     updateCompanyProfile(formProfile);
