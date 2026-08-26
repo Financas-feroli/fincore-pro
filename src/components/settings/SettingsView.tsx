@@ -39,36 +39,6 @@ export const SettingsView: React.FC = () => {
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
 
-  // Sync formProfile when companyProfile changes in context
-  useEffect(() => {
-    setFormProfile(companyProfile);
-  }, [companyProfile]);
-
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      showToast('Arquivo muito grande', 'Selecione uma imagem de até 2MB.', 'warning');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target?.result as string;
-      if (result) {
-        setFormProfile((prev) => ({ ...prev, logoUrl: result }));
-        showToast('Logotipo carregado', 'Clique em Salvar Dados para confirmar.', 'info');
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleRemoveLogo = () => {
-    setFormProfile((prev) => ({ ...prev, logoUrl: '' }));
-    showToast('Logotipo removido', 'Clique em Salvar Dados para confirmar.', 'info');
-  };
-
   const handleSubmitCompany = (e: React.FormEvent) => {
     e.preventDefault();
     updateCompanyProfile(formProfile);
@@ -197,65 +167,7 @@ export const SettingsView: React.FC = () => {
           </h4>
         </div>
 
-        <form onSubmit={handleSubmitCompany} className="space-y-5">
-          {/* Logo Upload Box */}
-          <div className="p-4 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col sm:flex-row items-center gap-5">
-            <div className="relative group shrink-0">
-              {formProfile.logoUrl ? (
-                <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white dark:bg-slate-800 border-2 border-emerald-500/40 flex items-center justify-center p-1.5 shadow-md">
-                  <img
-                    src={formProfile.logoUrl}
-                    alt="Logo da Empresa"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              ) : (
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-white font-extrabold text-3xl">
-                  {formProfile.tradeName ? formProfile.tradeName.charAt(0).toUpperCase() : (formProfile.name ? formProfile.name.charAt(0).toUpperCase() : 'P')}
-                </div>
-              )}
-            </div>
-
-            <div className="flex-1 text-center sm:text-left space-y-2">
-              <div>
-                <h5 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  Logotipo da Organização
-                </h5>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Exibido no topo do menu lateral, cabeçalhos do sistema e relatórios impressos.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-sm transition-all">
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>{formProfile.logoUrl ? 'Trocar Logotipo' : 'Enviar Logotipo'}</span>
-                  <input
-                    type="file"
-                    accept="image/png, image/jpeg, image/webp, image/svg+xml"
-                    onChange={handleLogoUpload}
-                    className="hidden"
-                  />
-                </label>
-
-                {formProfile.logoUrl && (
-                  <button
-                    type="button"
-                    onClick={handleRemoveLogo}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-lg border border-rose-500/20 transition-all"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Remover</span>
-                  </button>
-                )}
-                
-                <span className="text-[10px] text-slate-400">
-                  PNG, JPG, SVG ou WebP (máx. 2MB)
-                </span>
-              </div>
-            </div>
-          </div>
-
+        <form onSubmit={handleSubmitCompany} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
