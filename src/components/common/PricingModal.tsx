@@ -356,10 +356,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                   href={getStripeCheckoutUrl('starter')}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSubscribePlan('starter');
-                  }}
                   className={`w-full py-2.5 text-xs font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
                     selectedPlan === 'starter'
                       ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30'
@@ -495,10 +491,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                   href={getStripeCheckoutUrl('pro')}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSubscribePlan('pro');
-                  }}
                   className={`w-full py-2.5 text-xs font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
                     selectedPlan === 'pro'
                       ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30'
@@ -629,10 +621,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                   href={getStripeCheckoutUrl('business')}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSubscribePlan('business');
-                  }}
                   className={`w-full py-2.5 text-xs font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
                     selectedPlan === 'business'
                       ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30'

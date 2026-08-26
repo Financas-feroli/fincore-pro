@@ -19,7 +19,8 @@ import { RegisterView } from './components/auth/RegisterView';
 import { ForgotPasswordModal } from './components/auth/ForgotPasswordModal';
 
 const AppContent: React.FC = () => {
-  const { activeTab } = useFinance();
+  const { activeTab, showToast } = useFinance();
+  const { updateSubscription } = useAuth();
   const mainContainerRef = useRef<HTMLElement>(null);
 
   // Always reset scroll to the top whenever activeTab changes
@@ -28,6 +29,31 @@ const AppContent: React.FC = () => {
       mainContainerRef.current.scrollTop = 0;
     }
   }, [activeTab]);
+
+  // Listen to Stripe Checkout Return (e.g., ?checkout=success&plan=pro)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const checkoutSuccess =
+      urlParams.get('checkout') === 'success' ||
+      urlParams.get('payment') === 'success' ||
+      urlParams.get('status') === 'success' ||
+      urlParams.has('session_id');
+
+    const planParam = urlParams.get('plan') as 'starter' | 'pro' | 'business' | null;
+
+    if (checkoutSuccess) {
+      const confirmedPlan = planParam || 'pro';
+      updateSubscription(confirmedPlan, 'active');
+      showToast(
+        'Assinatura Confirmada pelo Stripe! 🎉',
+        `Parabéns! Seu Plano ${confirmedPlan.toUpperCase()} foi ativado com sucesso após a confirmação do pagamento.`,
+        'success'
+      );
+      // Clean query string from browser URL without reloading
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  }, []);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200">
