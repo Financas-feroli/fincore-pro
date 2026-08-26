@@ -10,6 +10,7 @@ import {
   Transaction,
 } from '../types';
 import { storageService, AppBackupData } from '../services/storage';
+import { useAuth } from './AuthContext';
 import { calculateCashFlowAndSummary } from '../utils/cashFlowCalculator';
 import { getTodayDateString, addMonthsClampDay } from '../utils/formatters';
 
@@ -139,14 +140,49 @@ interface FinanceContextType {
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
 export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const initialData = useMemo(() => storageService.loadAllData(), []);
+  const { user, organization, isDemoMode } = useAuth();
 
-  const [transactions, setTransactions] = useState<Transaction[]>(initialData.transactions);
-  const [accounts, setAccounts] = useState<BankAccount[]>(initialData.accounts);
-  const [categories, setCategories] = useState<Category[]>(initialData.categories);
-  const [costCenters, setCostCenters] = useState<CostCenter[]>(initialData.costCenters);
-  const [contacts, setContacts] = useState<Contact[]>(initialData.contacts);
-  const [companyProfile, setCompanyProfile] = useState<CompanyProfile>(initialData.companyProfile);
+  const activeTenantId = useMemo(() => {
+    if (isDemoMode) return 'demo';
+    if (user?.id) return `user_${user.id}`;
+    return 'guest';
+  }, [isDemoMode, user?.id]);
+
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [accounts, setAccounts] = useState<BankAccount[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile>(() => {
+    return {
+      name: 'PROSPER Soluções',
+      tradeName: 'PROSPER',
+      document: '00.000.000/0001-00',
+      fiscalRegime: 'simples',
+      email: 'contato@prosper.com.br',
+      phone: '(11) 99999-9999',
+      address: 'Av. Paulista, 1000 - São Paulo/SP',
+      currency: 'BRL',
+      dateFormat: 'DD/MM/YYYY',
+    };
+  });
+
+  // Re-load and isolate data whenever the active tenant or user changes
+  useEffect(() => {
+    const companyInfo = {
+      name: organization?.name || user?.user_metadata?.company_name || 'Minha Empresa Ltda',
+      tradeName: organization?.tradeName || user?.user_metadata?.company_name || 'Minha Empresa',
+      document: organization?.document || user?.user_metadata?.document || '',
+      email: user?.email || '',
+    };
+    const data = storageService.loadAllData(activeTenantId, companyInfo);
+    setTransactions(data.transactions);
+    setAccounts(data.accounts);
+    setCategories(data.categories);
+    setCostCenters(data.costCenters);
+    setContacts(data.contacts);
+    setCompanyProfile(data.companyProfile);
+  }, [activeTenantId, organization?.id, organization?.name]);
 
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -213,35 +249,35 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return calculateCashFlowAndSummary(transactions, accounts);
   }, [transactions, accounts]);
 
-  // Sync to storage
+  // Sync to storage with active tenant isolation
   const syncTransactions = (newTxns: Transaction[]) => {
     setTransactions(newTxns);
-    storageService.saveTransactions(newTxns);
+    storageService.saveTransactions(newTxns, activeTenantId);
   };
 
   const syncAccounts = (newAccs: BankAccount[]) => {
     setAccounts(newAccs);
-    storageService.saveAccounts(newAccs);
+    storageService.saveAccounts(newAccs, activeTenantId);
   };
 
   const syncCategories = (newCats: Category[]) => {
     setCategories(newCats);
-    storageService.saveCategories(newCats);
+    storageService.saveCategories(newCats, activeTenantId);
   };
 
   const syncCostCenters = (newCCs: CostCenter[]) => {
     setCostCenters(newCCs);
-    storageService.saveCostCenters(newCCs);
+    storageService.saveCostCenters(newCCs, activeTenantId);
   };
 
   const syncContacts = (newConts: Contact[]) => {
     setContacts(newConts);
-    storageService.saveContacts(newConts);
+    storageService.saveContacts(newConts, activeTenantId);
   };
 
   const syncCompany = (newComp: CompanyProfile) => {
     setCompanyProfile(newComp);
-    storageService.saveCompany(newComp);
+    storageService.saveCompany(newComp, activeTenantId);
   };
 
   // Quick Entry & Edit Transaction Handlers
@@ -836,12 +872,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setContacts(parsed.contacts || []);
       if (parsed.companyProfile) setCompanyProfile(parsed.companyProfile);
 
-      storageService.saveTransactions(parsed.transactions || []);
-      storageService.saveAccounts(parsed.accounts || []);
-      storageService.saveCategories(parsed.categories || []);
-      storageService.saveCostCenters(parsed.costCenters || []);
-      storageService.saveContacts(parsed.contacts || []);
-      if (parsed.companyProfile) storageService.saveCompany(parsed.companyProfile);
+      storageService.saveTransactions(parsed.transactions || [], activeTenantId);
+      storageService.saveAccounts(parsed.accounts || [], activeTenantId);
+      storageService.saveCategories(parsed.categories || [], activeTenantId);
+      storageService.saveCostCenters(parsed.costCenters || [], activeTenantId);
+      storageService.saveContacts(parsed.contacts || [], activeTenantId);
+      if (parsed.companyProfile) storageService.saveCompany(parsed.companyProfile, activeTenantId);
 
       showToast('Backup restaurado', 'Todos os dados foram importados com sucesso!', 'success');
       return true;
