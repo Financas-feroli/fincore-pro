@@ -52,9 +52,8 @@ export const DashboardView: React.FC = () => {
     openSettlementModal,
     setActiveTab,
     theme,
+    hideBalances,
   } = useFinance();
-
-  const [hideBalances, setHideBalances] = useState(false);
 
   const currentMonthStr = new Date().toISOString().substring(0, 7);
   const dre = calculateDRE(
@@ -130,42 +129,6 @@ export const DashboardView: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
-      {/* Top Welcome & Quick Actions Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
-        <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span>Dashboard Executivo</span>
-            <span className="text-[10px] font-mono px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded-full font-semibold">
-              Live Data
-            </span>
-          </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Cockpit de gestão financeira em tempo real, liquidez imediata e controladoria corporativa.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          {/* Privacy Toggle */}
-          <button
-            onClick={() => setHideBalances(!hideBalances)}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors border border-slate-200 dark:border-slate-700"
-            title={hideBalances ? 'Exibir valores' : 'Ocultar valores (Modo Privacidade)'}
-          >
-            {hideBalances ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">{hideBalances ? 'Mostrar Saldos' : 'Ocultar'}</span>
-          </button>
-
-          {/* New Transaction */}
-          <button
-            onClick={() => openQuickEntry('expense')}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-md shadow-emerald-600/25 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Novo Lançamento</span>
-          </button>
-        </div>
-      </div>
-
       {/* Top Executive KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 1. Saldo Consolidado */}

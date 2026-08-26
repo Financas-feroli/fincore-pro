@@ -52,6 +52,8 @@ interface FinanceContextType {
   setActiveTab: (tab: NavTab) => void;
   theme: 'dark' | 'light';
   toggleTheme: () => void;
+  hideBalances: boolean;
+  toggleHideBalances: () => void;
   isQuickEntryOpen: boolean;
   setIsQuickEntryOpen: (open: boolean) => void;
   quickEntryType: 'income' | 'expense' | 'transfer';
@@ -901,6 +903,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setActiveTab,
         theme,
         toggleTheme,
+        hideBalances,
+        toggleHideBalances,
         isQuickEntryOpen,
         setIsQuickEntryOpen,
         quickEntryType,
