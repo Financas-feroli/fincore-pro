@@ -13,6 +13,10 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
+import { useAuth } from '../../context/AuthContext';
+import { getPlanFeatures } from '../../utils/planPermissions';
+import { PricingModal } from '../common/PricingModal';
+import { Crown, Zap, Lock } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { storageService } from '../../services/storage';
 import { BankAccount, BankReconciliationItem } from '../../types';
@@ -65,6 +69,15 @@ export const BankingView: React.FC = () => {
 
   // Open New/Edit Account Modal
   const handleOpenAccountModal = (accountToEdit?: BankAccount) => {
+    if (!accountToEdit && accounts.length >= planFeatures.maxBankAccounts) {
+      showToast(
+        'Limite de Contas Bancárias Atingido 🔒',
+        `O Plano Starter permite até ${planFeatures.maxBankAccounts} contas bancárias. Faça upgrade para o Plano Pro para cadastrar contas e cartões ilimitados.`,
+        'warning'
+      );
+      setIsPricingModalOpen(true);
+      return;
+    }
     if (accountToEdit) {
       setEditingAccountId(accountToEdit.id);
       setAccName(accountToEdit.name);
@@ -418,43 +431,72 @@ export const BankingView: React.FC = () => {
       <div className="p-6 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
           <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-emerald-500" />
-              Conciliação Bancária Inteligente (OFX / CSV)
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-500" />
+                Conciliação Bancária Inteligente (OFX / CSV)
+              </h3>
+              {!planFeatures.hasOFXReconciliation && (
+                <span className="px-2 py-0.5 text-[9px] font-extrabold uppercase bg-amber-500/15 text-amber-600 dark:text-amber-300 rounded border border-amber-500/30">
+                  Disponível no Pro & Business
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-400 mt-0.5">
               Importe o extrato do seu banco e concilie automaticamente com os lançamentos do sistema.
             </p>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <select
-              value={selectedReconcileAcc}
-              onChange={(e) => setSelectedReconcileAcc(e.target.value)}
-              className="px-3.5 py-2 text-xs font-semibold bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl text-slate-800 dark:text-slate-100"
-            >
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  Conciliar: {a.name}
-                </option>
-              ))}
-            </select>
+          {planFeatures.hasOFXReconciliation && (
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <select
+                value={selectedReconcileAcc}
+                onChange={(e) => setSelectedReconcileAcc(e.target.value)}
+                className="px-3.5 py-2 text-xs font-semibold bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl text-slate-800 dark:text-slate-100"
+              >
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    Conciliar: {a.name}
+                  </option>
+                ))}
+              </select>
 
-            <label className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-xl cursor-pointer transition-colors shadow-sm flex-shrink-0">
-              <Upload className="w-3.5 h-3.5" />
-              <span>Importar Extrato (.OFX / .CSV)</span>
-              <input
-                type="file"
-                accept=".ofx,.csv,.txt"
-                onChange={handleOFXUpload}
-                className="hidden"
-              />
-            </label>
-          </div>
+              <label className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-xl cursor-pointer transition-colors shadow-sm flex-shrink-0">
+                <Upload className="w-3.5 h-3.5" />
+                <span>Importar Extrato (.OFX / .CSV)</span>
+                <input
+                  type="file"
+                  accept=".ofx,.csv,.txt"
+                  onChange={handleOFXUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          )}
         </div>
 
-        {/* Reconciliation List */}
-        {reconciliationItems.length === 0 ? (
+        {!planFeatures.hasOFXReconciliation ? (
+          <div className="p-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 mx-auto flex items-center justify-center border border-amber-500/20">
+              <Crown className="w-6 h-6" />
+            </div>
+            <div className="max-w-md mx-auto">
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                Conciliação Automática OFX & CSV
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                A importação e conciliação automática de extratos OFX de todos os bancos é um recurso dos planos <strong>PRO</strong> e <strong>BUSINESS</strong>.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsPricingModalOpen(true)}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-all inline-flex items-center gap-1.5"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+              <span>Fazer Upgrade para Plano Pro ↗</span>
+            </button>
+          </div>
+        ) : reconciliationItems.length === 0 ? (
           <div className="py-10 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl space-y-2">
             <Landmark className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto" />
             <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -922,6 +964,7 @@ export const BankingView: React.FC = () => {
         cancelLabel="Voltar"
         variant="danger"
       />
+      <PricingModal isOpen={isPricingModalOpen} onClose={() => setIsPricingModalOpen(false)} />
     </div>
   );
 };

@@ -140,15 +140,33 @@ export const SettingsView: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-300">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-            <span>Contas Bancárias & DRE Ilimitados</span>
+            <span>
+              {organization?.plan === 'starter' && !isTrial
+                ? '1 Usuário Gestor • Até 2 Contas Bancárias'
+                : organization?.plan === 'business' && !isTrial
+                ? 'Usuários Ilimitados • Multi-filiais & Contador'
+                : 'Até 5 Usuários • Contas Bancárias Ilimitadas'}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-            <span>Conciliação Bancária OFX Instantânea</span>
+            <span>
+              {organization?.plan === 'starter' && !isTrial
+                ? 'Lançamentos & Extrato Ilimitados'
+                : organization?.plan === 'business' && !isTrial
+                ? 'Conciliação OFX & Auditoria Avançada'
+                : 'Conciliação OFX Instantânea & DRE Completo'}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-            <span>Isolamento Row-Level Security Supabase</span>
+            <span>
+              {organization?.plan === 'business' && !isTrial
+                ? 'Gerente Dedicado & Isolamento Enterprise'
+                : organization?.plan === 'starter' && !isTrial
+                ? 'Exportação CSV & Nuvem Supabase RLS'
+                : 'Centros de Custo & Suporte Prioritário'}
+            </span>
           </div>
         </div>
       </div>

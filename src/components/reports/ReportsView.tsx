@@ -5,12 +5,20 @@ import {
   Calendar,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
+import { useAuth } from '../../context/AuthContext';
+import { getPlanFeatures } from '../../utils/planPermissions';
+import { PricingModal } from '../common/PricingModal';
+import { Crown, Zap, Lock, Layers } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { calculateDRE } from '../../utils/dreCalculator';
 
 export const ReportsView: React.FC = () => {
   const { transactions, categories, costCenters, companyProfile } = useFinance();
 
+  const { organization, isDemoMode } = useAuth();
+  const isTrial = isDemoMode || organization?.subscriptionStatus === 'trialing';
+  const planFeatures = getPlanFeatures(organization?.plan || 'pro', isTrial);
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [activeReport, setActiveReport] = useState<'dre' | 'cashFlow' | 'costCenters'>('dre');
   const [selectedMonth, setSelectedMonth] = useState('2026-08');
   const [regime, setRegime] = useState<'competence' | 'cash'>('competence');

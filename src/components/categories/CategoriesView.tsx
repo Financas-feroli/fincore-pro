@@ -7,6 +7,10 @@ import {
   Layers,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
+import { useAuth } from '../../context/AuthContext';
+import { getPlanFeatures } from '../../utils/planPermissions';
+import { PricingModal } from '../common/PricingModal';
+import { Crown, Zap, Lock } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { Category, CostCenter } from '../../types';
 import { Modal } from '../common/Modal';
@@ -25,6 +29,10 @@ export const CategoriesView: React.FC = () => {
     deleteCostCenter,
   } = useFinance();
 
+  const { organization, isDemoMode } = useAuth();
+  const isTrial = isDemoMode || organization?.subscriptionStatus === 'trialing';
+  const planFeatures = getPlanFeatures(organization?.plan || 'pro', isTrial);
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'categories' | 'costCenters'>('categories');
 
   // Auto scroll to top on tab change
@@ -233,7 +241,7 @@ export const CategoriesView: React.FC = () => {
 
           <button
             onClick={() =>
-              activeTab === 'categories' ? handleOpenCatModal() : handleOpenCCModal()
+              !planFeatures.hasCostCenters && activeTab === 'costCenters' ? setIsPricingModalOpen(true) : activeTab === 'categories' ? handleOpenCatModal() : handleOpenCCModal()
             }
             className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-md shadow-emerald-600/25 transition-all ml-auto"
           >
@@ -652,6 +660,7 @@ export const CategoriesView: React.FC = () => {
         cancelLabel="Voltar"
         variant="danger"
       />
+      <PricingModal isOpen={isPricingModalOpen} onClose={() => setIsPricingModalOpen(false)} />
     </div>
   );
 };
