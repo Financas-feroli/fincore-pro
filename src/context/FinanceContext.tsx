@@ -191,6 +191,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return (localStorage.getItem('prosper_theme') as 'dark' | 'light') || (localStorage.getItem('fincore_theme') as 'dark' | 'light') || 'dark';
   });
 
+  const [hideBalances, setHideBalances] = useState<boolean>(() => {
+    return localStorage.getItem('prosper_hide_balances') === 'true';
+  });
+
+  const toggleHideBalances = () => {
+    setHideBalances((prev) => {
+      const next = !prev;
+      localStorage.setItem('prosper_hide_balances', String(next));
+      return next;
+    });
+  };
+
   const [isQuickEntryOpen, setIsQuickEntryOpen] = useState(false);
   const [quickEntryType, setQuickEntryType] = useState<'income' | 'expense' | 'transfer'>('expense');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
