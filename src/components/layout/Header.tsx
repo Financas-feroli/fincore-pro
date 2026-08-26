@@ -4,8 +4,6 @@ import {
   Moon,
   Sun,
   Bell,
-  PlusCircle,
-  MinusCircle,
   ArrowRightLeft,
   AlertTriangle,
   Calendar,
@@ -159,36 +157,6 @@ export const Header: React.FC = () => {
       <div className="flex items-center gap-2.5">
         {/* Date Filter */}
         <DateRangeSelector />
-
-        {/* Quick Transaction Action Buttons */}
-        <div className="hidden lg:flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
-          <button
-            onClick={() => openQuickEntry('income')}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded transition-colors"
-            title="Nova Receita"
-          >
-            <PlusCircle className="w-3.5 h-3.5" />
-            <span>Receita</span>
-          </button>
-          <div className="w-[1px] h-3.5 bg-slate-200 dark:bg-slate-700" />
-          <button
-            onClick={() => openQuickEntry('expense')}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition-colors"
-            title="Nova Despesa"
-          >
-            <MinusCircle className="w-3.5 h-3.5" />
-            <span>Despesa</span>
-          </button>
-          <div className="w-[1px] h-3.5 bg-slate-200 dark:bg-slate-700" />
-          <button
-            onClick={() => openQuickEntry('transfer')}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded transition-colors"
-            title="Transferência entre Contas"
-          >
-            <ArrowRightLeft className="w-3.5 h-3.5" />
-            <span>Transferir</span>
-          </button>
-        </div>
 
         {/* Notifications Dropdown */}
         <div className="relative">
