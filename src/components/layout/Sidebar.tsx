@@ -108,8 +108,8 @@ export const Sidebar: React.FC = () => {
                 SaaS
               </span>
             </div>
-            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold tracking-tight uppercase truncate mt-0.5">
-              Gestão Financeira Inteligente
+            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium leading-tight mt-1">
+              Gestão financeira inteligente<br />para seu negócio
             </p>
           </div>
         </div>
