@@ -215,13 +215,27 @@ export const storageService = {
     localStorage.setItem(keys.COMPANY, JSON.stringify(company));
   },
 
-  getStripeLinks(): Record<'starter' | 'pro' | 'business', string> {
+  getStripeLinks(cycle: 'monthly' | 'yearly' = 'monthly'): Record<'starter' | 'pro' | 'business', string> {
     try {
       const stored = localStorage.getItem(GLOBAL_KEYS.STRIPE_LINKS);
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (cycle === 'yearly' && parsed.yearly) return parsed.yearly;
+        if (parsed.monthly) return parsed.monthly;
+        return parsed;
+      }
     } catch (e) {
       console.warn('Error reading stripe links:', e);
     }
+
+    if (cycle === 'yearly') {
+      return {
+        starter: 'https://buy.stripe.com/test_28EeVc5greGsaGf3wydMI00',
+        pro: 'https://buy.stripe.com/test_bJefZg24ffKw8y7ffgdMI01',
+        business: 'https://buy.stripe.com/test_cNicN4eR1eGs6pZ3wydMI02',
+      };
+    }
+
     return {
       starter: 'https://buy.stripe.com/test_28EeVc5greGsaGf3wydMI00',
       pro: 'https://buy.stripe.com/test_bJefZg24ffKw8y7ffgdMI01',
