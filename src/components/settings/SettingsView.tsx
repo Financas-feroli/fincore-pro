@@ -199,6 +199,22 @@ export const SettingsView: React.FC = () => {
             </div>
           </div>
 
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              Slogan / Mensagem Subtítulo do Topo
+            </label>
+            <input
+              type="text"
+              value={formProfile.slogan ?? ''}
+              placeholder="Ex: Gestão financeira inteligente para seu negócio"
+              onChange={(e) => setFormProfile({ ...formProfile, slogan: e.target.value })}
+              className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl focus:outline-none focus:border-emerald-500"
+            />
+            <p className="text-[10px] text-slate-400">
+              Essa mensagem aparecerá de forma dinâmica diretamente abaixo do nome da empresa no topo da barra lateral.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">

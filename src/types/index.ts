@@ -165,6 +165,7 @@ export interface Transaction {
 export interface CompanyProfile {
   name: string;
   tradeName: string;
+  slogan?: string;
   document: string; // CNPJ
   email: string;
   phone: string;

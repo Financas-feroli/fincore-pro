@@ -3,6 +3,7 @@ import { BankAccount, Category, CompanyProfile, Contact, CostCenter, Transaction
 export const initialCompanyProfile: CompanyProfile = {
   name: 'PROSPER Soluções Corporativas Ltda',
   tradeName: 'PROSPER',
+  slogan: 'Gestão financeira inteligente para seu negócio',
   document: '34.892.110/0001-95',
   email: 'financeiro@prosper.com.br',
   phone: '(11) 3456-7890',
