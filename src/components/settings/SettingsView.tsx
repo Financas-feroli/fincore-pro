@@ -13,8 +13,6 @@ import {
   CheckCircle2,
   ShieldCheck,
   LogOut,
-  CreditCard,
-  ExternalLink,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
@@ -38,23 +36,12 @@ export const SettingsView: React.FC = () => {
   const { organization, signOut, isDemoMode, user, profile } = useAuth();
 
   const [formProfile, setFormProfile] = useState<CompanyProfile>(companyProfile);
-  const [stripeLinks, setStripeLinks] = useState(storageService.getStripeLinks());
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
 
   const handleSubmitCompany = (e: React.FormEvent) => {
     e.preventDefault();
     updateCompanyProfile(formProfile);
-  };
-
-  const handleSaveStripeLinks = (e: React.FormEvent) => {
-    e.preventDefault();
-    storageService.saveStripeLinks(stripeLinks);
-    showToast(
-      'Links do Stripe Salvos! 💳',
-      'Os novos links de pagamento foram configurados com sucesso.',
-      'success'
-    );
   };
 
   const handleRestoreFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -299,118 +286,7 @@ export const SettingsView: React.FC = () => {
         </form>
       </div>
 
-      {/* 3. Stripe Checkout Integration */}
-      <div className="p-6 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2">
-            <CreditCard className="w-4 h-4 text-emerald-500" />
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              Integração de Pagamentos Stripe (Checkout)
-            </h4>
-          </div>
-          <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-            Checkout Direto Ativo
-          </span>
-        </div>
-
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Configure as URLs diretas de checkout geradas no seu painel Stripe (Payment Links) para cada plano.
-        </p>
-
-        <form onSubmit={handleSaveStripeLinks} className="space-y-4">
-          <div className="grid grid-cols-1 gap-3">
-            {/* Starter */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                  Link Stripe — Plano Starter (R$ 49/mês)
-                </label>
-                <a
-                  href={stripeLinks.starter}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-bold"
-                >
-                  <span>Testar Link</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-              <input
-                type="url"
-                required
-                value={stripeLinks.starter}
-                onChange={(e) => setStripeLinks({ ...stripeLinks, starter: e.target.value })}
-                placeholder="https://buy.stripe.com/..."
-                className="w-full px-3.5 py-2 text-xs font-mono text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            {/* Pro */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                  Link Stripe — Plano Pro (R$ 97/mês)
-                </label>
-                <a
-                  href={stripeLinks.pro}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-bold"
-                >
-                  <span>Testar Link</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-              <input
-                type="url"
-                required
-                value={stripeLinks.pro}
-                onChange={(e) => setStripeLinks({ ...stripeLinks, pro: e.target.value })}
-                placeholder="https://buy.stripe.com/..."
-                className="w-full px-3.5 py-2 text-xs font-mono text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            {/* Business */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                  Link Stripe — Plano Business (R$ 197/mês)
-                </label>
-                <a
-                  href={stripeLinks.business}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-bold"
-                >
-                  <span>Testar Link</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-              <input
-                type="url"
-                required
-                value={stripeLinks.business}
-                onChange={(e) => setStripeLinks({ ...stripeLinks, business: e.target.value })}
-                placeholder="https://buy.stripe.com/..."
-                className="w-full px-3.5 py-2 text-xs font-mono text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <button
-              type="submit"
-              className="px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1.5"
-            >
-              <CreditCard className="w-3.5 h-3.5" />
-              <span>Salvar Links do Stripe</span>
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* 4. Backup & Data Management */}
+      {/* 3. Backup & Data Management */}
       <div className="p-6 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
           <Database className="w-4 h-4 text-blue-500" />
