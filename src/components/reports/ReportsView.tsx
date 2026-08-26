@@ -98,11 +98,13 @@ export const ReportsView: React.FC = () => {
 
     return costCenters.map((cc) => {
       const data = map.get(cc.id) || { income: 0, expense: 0 };
-      const net = data.income - data.expense;
+      const inc = Math.round(data.income * 100) / 100;
+      const exp = Math.round(data.expense * 100) / 100;
+      const net = Math.round((inc - exp) * 100) / 100;
       return {
         ...cc,
-        income: data.income,
-        expense: data.expense,
+        income: inc,
+        expense: exp,
         net,
       };
     });

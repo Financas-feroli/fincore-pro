@@ -186,6 +186,7 @@ export const BankingView: React.FC = () => {
         const found = transactions.find(
           (t) =>
             t.accountId === selectedReconcileAcc &&
+            t.type === (item.type === 'CREDIT' ? 'income' : 'expense') &&
             Math.abs(t.amount - item.amount) < 0.01 &&
             Math.abs(new Date(t.dueDate).getTime() - new Date(item.date).getTime()) <=
               1000 * 60 * 60 * 24 * 3

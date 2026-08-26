@@ -77,8 +77,12 @@ export const DashboardView: React.FC = () => {
     const overdueRate = totalReceivables > 0 ? Number(((summary.overdueReceivables / totalReceivables) * 100).toFixed(1)) : 0;
 
     // 3. Cash Runway (Meses de sobrevivência com o caixa atual)
-    const avgMonthlyExpense = Math.max(1000, summary.monthExpense + summary.expectedExpense);
-    const runwayMonths = totalLiquidity > 0 ? Number((totalLiquidity / avgMonthlyExpense).toFixed(1)) : 0;
+    const totalMonthlyExpense = Math.round((summary.monthExpense + summary.expectedExpense) * 100) / 100;
+    const runwayMonths = totalMonthlyExpense > 0
+      ? Number((totalLiquidity / totalMonthlyExpense).toFixed(1))
+      : totalLiquidity > 0
+      ? 99.9
+      : 0;
 
     // 4. Operational Margin (Margem Bruta)
     const grossMargin = dre.grossRevenue > 0 ? Number(((dre.grossProfit / dre.grossRevenue) * 100).toFixed(1)) : 0;

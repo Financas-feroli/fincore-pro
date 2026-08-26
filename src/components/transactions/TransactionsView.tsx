@@ -138,9 +138,9 @@ export const TransactionsView: React.FC = () => {
       if (t.type === 'expense') outflow += t.amount;
     });
     return {
-      totalInflow: inflow,
-      totalOutflow: outflow,
-      netTotal: inflow - outflow,
+      totalInflow: Math.round(inflow * 100) / 100,
+      totalOutflow: Math.round(outflow * 100) / 100,
+      netTotal: Math.round((inflow - outflow) * 100) / 100,
     };
   }, [filteredTransactions]);
 
