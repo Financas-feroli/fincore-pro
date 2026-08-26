@@ -24,6 +24,7 @@ const STORAGE_KEYS = {
   CONTACTS: 'prosper_contacts_v1',
   COMPANY: 'prosper_company_v1',
   THEME: 'prosper_theme_v1',
+  STRIPE_LINKS: 'prosper_stripe_links_v1',
 };
 
 const LEGACY_KEYS = {
@@ -149,6 +150,24 @@ export const storageService = {
 
   saveCompany(company: CompanyProfile) {
     localStorage.setItem(STORAGE_KEYS.COMPANY, JSON.stringify(company));
+  },
+
+  getStripeLinks(): Record<'starter' | 'pro' | 'business', string> {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.STRIPE_LINKS);
+      if (stored) return JSON.parse(stored);
+    } catch (e) {
+      console.warn('Error reading stripe links:', e);
+    }
+    return {
+      starter: 'https://buy.stripe.com/test_28EeVc5greGsaGf3wydMI00',
+      pro: 'https://buy.stripe.com/test_bJefZg24ffKw8y7ffgdMI01',
+      business: 'https://buy.stripe.com/test_cNicN4eR1eGs6pZ3wydMI02',
+    };
+  },
+
+  saveStripeLinks(links: Record<'starter' | 'pro' | 'business', string>) {
+    localStorage.setItem(STORAGE_KEYS.STRIPE_LINKS, JSON.stringify(links));
   },
 
   // Reset to full demo dataset

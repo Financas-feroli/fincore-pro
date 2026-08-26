@@ -17,6 +17,7 @@ import {
 import { Modal } from './Modal';
 import { useAuth } from '../../context/AuthContext';
 import { useFinance } from '../../context/FinanceContext';
+import { storageService } from '../../services/storage';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -29,14 +30,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [checkoutPlan, setCheckoutPlan] = useState<'starter' | 'pro' | 'business' | null>(null);
   const [copiedPix, setCopiedPix] = useState(false);
-  const [paymentTab, setPaymentTab] = useState<'pix' | 'card'>('pix');
-
-  // Stripe Payment Links configured
-  const stripePaymentLinks: Record<'starter' | 'pro' | 'business', string> = {
-    starter: 'https://buy.stripe.com/test_28EeVc5greGsaGf3wydMI00',
-    pro: 'https://buy.stripe.com/test_bJefZg24ffKw8y7ffgdMI01',
-    business: 'https://buy.stripe.com/test_cNicN4eR1eGs6pZ3wydMI02',
-  };
+  const [paymentTab, setPaymentTab] = useState<'card' | 'pix'>('card');
 
   const currentPlan = organization?.plan || 'pro';
   const isTrial = organization?.subscriptionStatus === 'trialing';
@@ -46,6 +40,19 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
     const diffMs = new Date(organization.trialEndsAt).getTime() - Date.now();
     remainingDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
   }
+
+  // Get Stripe checkout URL with parameters
+  const getStripeCheckoutUrl = (planId: 'starter' | 'pro' | 'business') => {
+    const links = storageService.getStripeLinks();
+    const baseLink =
+      links[planId] || 'https://buy.stripe.com/test_bJefZg24ffKw8y7ffgdMI01';
+
+    const params = new URLSearchParams();
+    if (user?.email) params.append('prefilled_email', user.email);
+    if (organization?.id) params.append('client_reference_id', organization.id);
+
+    return `${baseLink}${baseLink.includes('?') ? '&' : '?'}${params.toString()}`;
+  };
 
   // Handle Trial Start
   const handleStartTrial = () => {
@@ -57,11 +64,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
     );
     setCheckoutPlan(null);
     onClose();
-  };
-
-  // Open Checkout Step
-  const handleOpenCheckout = (planId: 'starter' | 'pro' | 'business') => {
-    setCheckoutPlan(planId);
   };
 
   // Confirm Plan Activation
@@ -76,21 +78,21 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
     onClose();
   };
 
-  // Handle Stripe Checkout
-  const handleStripeCheckout = (planId: 'starter' | 'pro' | 'business') => {
-    const baseLink = stripePaymentLinks[planId];
-    if (!baseLink) return;
-
-    const params = new URLSearchParams();
-    if (user?.email) params.append('prefilled_email', user.email);
-    if (organization?.id) params.append('client_reference_id', organization.id);
-
+  // Handle Direct Stripe Checkout Trigger
+  const handleDirectStripeRedirect = (planId: 'starter' | 'pro' | 'business') => {
+    const url = getStripeCheckoutUrl(planId);
     updateSubscription(planId, 'active');
+    showToast(
+      'Redirecionando para o Stripe...',
+      `Abrindo página oficial de pagamento do plano PROSPER ${planId.toUpperCase()}.`,
+      'info'
+    );
 
-    const finalCheckoutUrl = `${baseLink}?${params.toString()}`;
-    window.open(finalCheckoutUrl, '_blank', 'noopener,noreferrer');
-    setCheckoutPlan(null);
-    onClose();
+    // Safe direct open
+    const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      window.location.href = url;
+    }
   };
 
   const handleCopyPix = (amount: number) => {
@@ -172,17 +174,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
           {/* Payment Method Selector */}
           <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
             <button
-              onClick={() => setPaymentTab('pix')}
-              className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all ${
-                paymentTab === 'pix'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25'
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800'
-              }`}
-            >
-              <QrCode className="w-4 h-4" />
-              <span>PIX Instantâneo</span>
-            </button>
-            <button
               onClick={() => setPaymentTab('card')}
               className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all ${
                 paymentTab === 'card'
@@ -193,9 +184,59 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
               <CreditCard className="w-4 h-4" />
               <span>Cartão de Crédito / Stripe</span>
             </button>
+
+            <button
+              onClick={() => setPaymentTab('pix')}
+              className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+                paymentTab === 'pix'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800'
+              }`}
+            >
+              <QrCode className="w-4 h-4" />
+              <span>PIX Instantâneo</span>
+            </button>
           </div>
 
-          {/* TAB 1: PIX */}
+          {/* TAB 1: CREDIT CARD & STRIPE */}
+          {paymentTab === 'card' && (
+            <div className="space-y-4 pt-1">
+              <div className="p-5 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-emerald-500" />
+                  <h5 className="text-xs font-bold text-slate-900 dark:text-white">
+                    Checkout Seguro Stripe (Cartão em até 12x)
+                  </h5>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Você será redirecionado para a página criptografada de pagamento do Stripe com suporte a faturamento automático e emissão de recibo contábil.
+                </p>
+
+                <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
+                  <a
+                    href={getStripeCheckoutUrl(checkoutPlan)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => updateSubscription(checkoutPlan, 'active')}
+                    className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all"
+                  >
+                    <span>Ir para Checkout Stripe</span>
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => handleConfirmActivation(checkoutPlan)}
+                    className="w-full sm:w-auto px-5 py-3 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-xl transition-all"
+                  >
+                    Ativar Assinatura Imediata (1-Clique)
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: PIX */}
           {paymentTab === 'pix' && (
             <div className="space-y-4 pt-1">
               <div className="p-4 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex flex-col sm:flex-row items-center gap-4">
@@ -253,43 +294,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                 <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300" />
                 <span>Confirmar Pagamento PIX e Ativar Acesso Imediato</span>
               </button>
-            </div>
-          )}
-
-          {/* TAB 2: CREDIT CARD & STRIPE */}
-          {paymentTab === 'card' && (
-            <div className="space-y-4 pt-1">
-              <div className="p-5 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-emerald-500" />
-                  <h5 className="text-xs font-bold text-slate-900 dark:text-white">
-                    Checkout Seguro Stripe (Cartão em até 12x)
-                  </h5>
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Você será redirecionado para a página criptografada de pagamento do Stripe com suporte a faturamento automático e emissão de recibo contábil.
-                </p>
-
-                <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleStripeCheckout(checkoutPlan)}
-                    className="w-full sm:w-auto px-6 py-2.5 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white font-bold text-xs rounded-xl border border-slate-700 flex items-center justify-center gap-2 shadow-sm transition-all"
-                  >
-                    <span>Ir para Checkout Stripe</span>
-                    <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleConfirmActivation(checkoutPlan)}
-                    className="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/25 flex items-center justify-center gap-1.5 transition-all"
-                  >
-                    <Check className="w-4 h-4 stroke-[3]" />
-                    <span>Ativar Assinatura Imediata (1-Clique)</span>
-                  </button>
-                </div>
-              </div>
             </div>
           )}
         </div>
@@ -474,7 +478,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                 </ul>
               </div>
 
-              <div className="mt-6 pt-3">
+              <div className="mt-6 pt-3 space-y-2">
                 {!isTrial && currentPlan === 'starter' ? (
                   <button
                     type="button"
@@ -485,13 +489,31 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     <span>Plano Atual Ativo</span>
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenCheckout('starter')}
-                    className="w-full py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/25 transition-all"
-                  >
-                    Assinar Starter
-                  </button>
+                  <>
+                    <a
+                      href={getStripeCheckoutUrl('starter')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => updateSubscription('starter', 'active')}
+                      className="w-full py-2.5 text-xs font-extrabold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/25 flex items-center justify-center gap-1.5 transition-all"
+                    >
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Assinar com Stripe</span>
+                      <ExternalLink className="w-3 h-3 text-emerald-200 ml-0.5" />
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentTab('pix');
+                        setCheckoutPlan('starter');
+                      }}
+                      className="w-full py-1.5 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1 transition-all"
+                    >
+                      <QrCode className="w-3 h-3 text-emerald-500" />
+                      <span>Pagar via PIX</span>
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -567,7 +589,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                 </ul>
               </div>
 
-              <div className="mt-6 pt-3">
+              <div className="mt-6 pt-3 space-y-2">
                 {!isTrial && currentPlan === 'pro' ? (
                   <button
                     type="button"
@@ -578,14 +600,31 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     <span>Plano Atual Ativo</span>
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenCheckout('pro')}
-                    className="w-full py-2.5 text-xs font-extrabold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-1.5"
-                  >
-                    <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
-                    <span>Assinar Pro</span>
-                  </button>
+                  <>
+                    <a
+                      href={getStripeCheckoutUrl('pro')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => updateSubscription('pro', 'active')}
+                      className="w-full py-2.5 text-xs font-extrabold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1.5 transition-all"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+                      <span>Assinar Pro com Stripe</span>
+                      <ExternalLink className="w-3 h-3 text-emerald-200 ml-0.5" />
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentTab('pix');
+                        setCheckoutPlan('pro');
+                      }}
+                      className="w-full py-1.5 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1 transition-all"
+                    >
+                      <QrCode className="w-3 h-3 text-emerald-500" />
+                      <span>Pagar via PIX</span>
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -656,7 +695,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                 </ul>
               </div>
 
-              <div className="mt-6 pt-3">
+              <div className="mt-6 pt-3 space-y-2">
                 {!isTrial && currentPlan === 'business' ? (
                   <button
                     type="button"
@@ -667,13 +706,31 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     <span>Plano Atual Ativo</span>
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenCheckout('business')}
-                    className="w-full py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/25 transition-all"
-                  >
-                    Assinar Business
-                  </button>
+                  <>
+                    <a
+                      href={getStripeCheckoutUrl('business')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => updateSubscription('business', 'active')}
+                      className="w-full py-2.5 text-xs font-extrabold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/25 flex items-center justify-center gap-1.5 transition-all"
+                    >
+                      <Building2 className="w-3.5 h-3.5 text-emerald-200" />
+                      <span>Assinar Business com Stripe</span>
+                      <ExternalLink className="w-3 h-3 text-emerald-200 ml-0.5" />
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentTab('pix');
+                        setCheckoutPlan('business');
+                      }}
+                      className="w-full py-1.5 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1 transition-all"
+                    >
+                      <QrCode className="w-3 h-3 text-emerald-500" />
+                      <span>Pagar via PIX</span>
+                    </button>
+                  </>
                 )}
               </div>
             </div>
