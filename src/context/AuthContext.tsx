@@ -8,6 +8,7 @@ interface AuthContextType {
   session: Session | null;
   profile: AuthUserProfile | null;
   organization: Organization | null;
+  isDemoMode: boolean;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (
@@ -18,6 +19,7 @@ interface AuthContextType {
     document: string
   ) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  enterDemoMode: () => void;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updateSubscription: (
     plan: 'starter' | 'pro' | 'business',
@@ -30,6 +32,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const LOCAL_SUB_KEY = 'prosper_subscription_v1';
 const LEGACY_SUB_KEY = 'fincore_subscription_v1';
+const DEMO_SESSION_KEY = 'prosper_demo_session';
 
 const getInitialOrganization = (): Organization => {
   try {
@@ -60,7 +63,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<AuthUserProfile | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(getInitialOrganization);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
+    return sessionStorage.getItem(DEMO_SESSION_KEY) === 'true';
+  });
   const [isLoading, setIsLoading] = useState(true);
+
+  // Enter Demo Mode
+  const enterDemoMode = () => {
+    setIsDemoMode(true);
+    sessionStorage.setItem(DEMO_SESSION_KEY, 'true');
+    const demoOrg = getInitialOrganization();
+    setOrganization(demoOrg);
+    setProfile({
+      id: 'demo-user',
+      email: 'teste@prosper.com.br',
+      fullName: 'Gestor (Conta de Teste)',
+      role: 'admin',
+      organizationId: demoOrg.id,
+      organization: demoOrg,
+    });
+  };
 
   // Update subscription locally and remotely
   const updateSubscription = (
@@ -306,11 +328,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Sign Out
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn('Supabase signOut warning:', err);
+    }
+    setIsDemoMode(false);
+    sessionStorage.removeItem(DEMO_SESSION_KEY);
     setUser(null);
     setSession(null);
     setProfile(null);
-    setOrganization(null);
   };
 
   // Reset Password
@@ -330,11 +357,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         session,
         profile,
         organization,
+        isDemoMode,
         isLoading,
         signIn,
         signUp,
         signOut,
+        enterDemoMode,
         resetPassword,
+        updateSubscription,
       }}
     >
       {children}

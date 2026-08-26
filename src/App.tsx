@@ -68,10 +68,9 @@ const AppContent: React.FC = () => {
 };
 
 const AuthGate: React.FC = () => {
-  const { user, isLoading } = useAuth();
+  const { user, isDemoMode, enterDemoMode, isLoading } = useAuth();
   const [authView, setAuthView] = useState<'login' | 'register'>('login');
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
-  const [isDemoMode, setIsDemoMode] = useState(false);
 
   if (isLoading) {
     return (
@@ -93,7 +92,7 @@ const AuthGate: React.FC = () => {
           <LoginView
             onSwitchToRegister={() => setAuthView('register')}
             onForgotPassword={() => setIsForgotPasswordOpen(true)}
-            onDemoLogin={() => setIsDemoMode(true)}
+            onDemoLogin={enterDemoMode}
           />
         ) : (
           <RegisterView onSwitchToLogin={() => setAuthView('login')} />

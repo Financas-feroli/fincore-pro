@@ -33,10 +33,18 @@ export const Header: React.FC = () => {
     openSettlementModal,
   } = useFinance();
 
-  const { user, profile, organization, signOut } = useAuth();
+  const { user, profile, organization, signOut, isDemoMode } = useAuth();
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
+  const userInitial = isDemoMode
+    ? 'T'
+    : profile?.fullName
+    ? profile.fullName.charAt(0).toUpperCase()
+    : user?.email
+    ? user.email.charAt(0).toUpperCase()
+    : 'P';
 
   // Global Keyboard Shortcuts (N = New, / = Search)
   useEffect(() => {
@@ -111,8 +119,6 @@ export const Header: React.FC = () => {
     title: 'PROSPER',
     desc: 'Sistema Financeiro',
   };
-
-  const userInitial = profile?.fullName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'G';
 
   return (
     <header className="h-16 px-6 bg-white dark:bg-[#111827] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between z-10 select-none">
@@ -297,15 +303,22 @@ export const Header: React.FC = () => {
               <div className="fixed inset-0 z-20" onClick={() => setIsUserMenuOpen(false)} />
               <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-30 py-2 animate-fade-in">
                 <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
-                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                    {profile?.fullName || 'Usuário Gestor'}
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                      {isDemoMode ? 'Gestor (Conta de Teste)' : profile?.fullName || 'Usuário Gestor'}
+                    </p>
+                    {isDemoMode && (
+                      <span className="px-1.5 py-0.5 text-[9px] font-black uppercase bg-amber-500/15 text-amber-600 dark:text-amber-300 rounded border border-amber-500/30">
+                        Teste
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                    {user?.email || 'admin@empresa.com'}
+                    {isDemoMode ? 'teste@prosper.com.br' : user?.email || 'admin@empresa.com'}
                   </p>
                   <div className="flex items-center gap-1.5 mt-2 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 w-fit">
                     <Building className="w-3 h-3" />
-                    <span className="truncate">{organization?.name || 'Minha Empresa'}</span>
+                    <span className="truncate">{organization?.name || 'PROSPER Soluções'}</span>
                   </div>
                 </div>
 
@@ -322,9 +335,9 @@ export const Header: React.FC = () => {
                   </button>
 
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       setIsUserMenuOpen(false);
-                      signOut();
+                      await signOut();
                     }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors font-semibold"
                   >

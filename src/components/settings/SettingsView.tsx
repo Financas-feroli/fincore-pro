@@ -12,6 +12,7 @@ import {
   Zap,
   CheckCircle2,
   ShieldCheck,
+  LogOut,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
@@ -30,7 +31,7 @@ export const SettingsView: React.FC = () => {
     toggleTheme,
   } = useFinance();
 
-  const { organization } = useAuth();
+  const { organization, signOut, isDemoMode, user, profile } = useAuth();
 
   const [formProfile, setFormProfile] = useState<CompanyProfile>(companyProfile);
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
@@ -359,6 +360,29 @@ export const SettingsView: React.FC = () => {
               <span>Tema Escuro</span>
             </>
           )}
+        </button>
+      </div>
+
+      {/* 5. Session & Logout Card */}
+      <div className="p-6 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <LogOut className="w-4 h-4 text-rose-500" />
+            Sessão & Desconexão
+          </h4>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Conectado como: <strong>{isDemoMode ? 'Gestor (Conta de Teste)' : profile?.fullName || user?.email || 'Gestor'}</strong> • {isDemoMode ? 'teste@prosper.com.br' : user?.email || 'admin@empresa.com'}
+          </p>
+        </div>
+
+        <button
+          onClick={async () => {
+            await signOut();
+          }}
+          className="flex items-center gap-2 px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-xl text-xs font-bold transition-all shadow-sm"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Encerrar Sessão (Sair)</span>
         </button>
       </div>
 
