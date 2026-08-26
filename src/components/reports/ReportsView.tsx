@@ -3,12 +3,15 @@ import {
   FileSpreadsheet,
   Printer,
   Calendar,
+  Crown,
+  Zap,
+  Lock,
+  Layers,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
 import { getPlanFeatures } from '../../utils/planPermissions';
 import { PricingModal } from '../common/PricingModal';
-import { Crown, Zap, Lock, Layers } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { calculateDRE } from '../../utils/dreCalculator';
 

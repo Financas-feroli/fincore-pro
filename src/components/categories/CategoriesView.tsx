@@ -5,12 +5,14 @@ import {
   Edit2,
   Trash2,
   Layers,
+  Crown,
+  Zap,
+  Lock,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
 import { getPlanFeatures } from '../../utils/planPermissions';
 import { PricingModal } from '../common/PricingModal';
-import { Crown, Zap, Lock } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { Category, CostCenter } from '../../types';
 import { Modal } from '../common/Modal';

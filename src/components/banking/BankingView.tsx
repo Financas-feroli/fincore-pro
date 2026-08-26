@@ -11,12 +11,14 @@ import {
   Edit2,
   Sparkles,
   RefreshCw,
+  Crown,
+  Zap,
+  Lock,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
 import { getPlanFeatures } from '../../utils/planPermissions';
 import { PricingModal } from '../common/PricingModal';
-import { Crown, Zap, Lock } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { storageService } from '../../services/storage';
 import { BankAccount, BankReconciliationItem } from '../../types';
@@ -37,6 +39,11 @@ export const BankingView: React.FC = () => {
     categories,
     showToast,
   } = useFinance();
+
+  const { organization, isDemoMode } = useAuth();
+  const isTrial = isDemoMode || organization?.subscriptionStatus === 'trialing';
+  const planFeatures = getPlanFeatures(organization?.plan || 'pro', isTrial);
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
 
   // New Account Modal State
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
