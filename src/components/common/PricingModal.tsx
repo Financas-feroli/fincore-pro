@@ -30,6 +30,12 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
   const currentPlan = organization?.plan || 'pro';
   const isTrial = organization?.subscriptionStatus === 'trialing';
 
+  // Selected plan state for interactive card selection
+  const [selectedPlan, setSelectedPlan] = useState<'trial' | 'starter' | 'pro' | 'business'>(() => {
+    if (isTrial) return 'pro';
+    return currentPlan as any;
+  });
+
   let remainingDays = 14;
   if (organization?.trialEndsAt) {
     const diffMs = new Date(organization.trialEndsAt).getTime() - Date.now();
@@ -58,6 +64,14 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
       'success'
     );
     onClose();
+  };
+
+  // Plan price helper
+  const getSelectedPlanPrice = () => {
+    if (selectedPlan === 'trial') return 0;
+    if (selectedPlan === 'starter') return billingPeriod === 'yearly' ? 39 : 49;
+    if (selectedPlan === 'pro') return billingPeriod === 'yearly' ? 79 : 97;
+    return billingPeriod === 'yearly' ? 159 : 197;
   };
 
   return (
@@ -102,10 +116,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {/* COLUMN 1: TESTE GRÁTIS (14 DIAS) */}
             <div
-              className={`p-5 rounded-2xl border flex flex-col justify-between relative transition-all ${
-                isTrial
-                  ? 'border-amber-500/60 bg-amber-500/5 dark:bg-amber-500/10 shadow-md ring-1 ring-amber-500/40'
-                  : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 hover:border-slate-300 dark:hover:border-slate-700'
+              onClick={() => setSelectedPlan('trial')}
+              className={`p-5 rounded-2xl border-2 flex flex-col justify-between relative transition-all cursor-pointer select-none ${
+                selectedPlan === 'trial'
+                  ? 'border-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xl ring-2 ring-emerald-500/30'
+                  : isTrial
+                  ? 'border-amber-500/40 bg-amber-500/5 dark:bg-amber-500/10 hover:border-emerald-500/40'
+                  : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 hover:border-emerald-500/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/40'
               }`}
             >
               <div>
@@ -113,7 +130,14 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                   <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30">
                     Avaliação Gratuita
                   </span>
-                  <Clock className="w-4 h-4 text-amber-500" />
+                  {selectedPlan === 'trial' ? (
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                      <Check className="w-3 h-3 stroke-[3]" />
+                      Selecionado
+                    </span>
+                  ) : (
+                    <Clock className="w-4 h-4 text-amber-500" />
+                  )}
                 </div>
 
                 <h4 className="text-lg font-extrabold text-slate-900 dark:text-white mt-3">
@@ -173,7 +197,10 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                 ) : (
                   <button
                     type="button"
-                    onClick={handleStartTrial}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStartTrial();
+                    }}
                     className="w-full py-2.5 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all shadow-sm"
                   >
                     Iniciar 14 Dias Grátis
@@ -184,10 +211,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
 
             {/* COLUMN 2: STARTER */}
             <div
-              className={`p-5 rounded-2xl border flex flex-col justify-between relative transition-all ${
-                !isTrial && currentPlan === 'starter'
-                  ? 'border-emerald-500 bg-emerald-500/5 dark:bg-emerald-500/10 shadow-lg ring-1 ring-emerald-500'
-                  : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 hover:border-slate-300 dark:hover:border-slate-700'
+              onClick={() => setSelectedPlan('starter')}
+              className={`p-5 rounded-2xl border-2 flex flex-col justify-between relative transition-all cursor-pointer select-none ${
+                selectedPlan === 'starter'
+                  ? 'border-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xl ring-2 ring-emerald-500/30'
+                  : !isTrial && currentPlan === 'starter'
+                  ? 'border-emerald-500/40 bg-emerald-500/5 dark:bg-emerald-500/10'
+                  : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 hover:border-emerald-500/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/40'
               }`}
             >
               <div>
@@ -195,6 +225,12 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                   <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                     Básico & Autônomos
                   </span>
+                  {selectedPlan === 'starter' && (
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                      <Check className="w-3 h-3 stroke-[3]" />
+                      Selecionado
+                    </span>
+                  )}
                 </div>
 
                 <h4 className="text-lg font-extrabold text-slate-900 dark:text-white mt-3">
@@ -262,11 +298,18 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     href={getStripeCheckoutUrl('starter')}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={() => updateSubscription('starter', 'active')}
-                    className="w-full py-2.5 text-xs font-extrabold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/25 flex items-center justify-center gap-1.5 transition-all"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateSubscription('starter', 'active');
+                    }}
+                    className={`w-full py-2.5 text-xs font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+                      selectedPlan === 'starter'
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30'
+                        : 'bg-emerald-600/90 hover:bg-emerald-600 text-white shadow-md'
+                    }`}
                   >
                     <CreditCard className="w-3.5 h-3.5" />
-                    <span>Assinar com Stripe</span>
+                    <span>Assinar Starter</span>
                     <ExternalLink className="w-3 h-3 text-emerald-200 ml-0.5" />
                   </a>
                 )}
@@ -275,13 +318,16 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
 
             {/* COLUMN 3: PRO (MAIS ESCOLHIDO) */}
             <div
-              className={`p-5 rounded-2xl border flex flex-col justify-between relative transition-all ${
-                !isTrial && currentPlan === 'pro'
-                  ? 'border-emerald-500 bg-emerald-500/10 shadow-xl ring-2 ring-emerald-500'
-                  : 'border-emerald-500/40 bg-emerald-500/5 dark:bg-emerald-500/10 shadow-lg'
+              onClick={() => setSelectedPlan('pro')}
+              className={`p-5 rounded-2xl border-2 flex flex-col justify-between relative transition-all cursor-pointer select-none ${
+                selectedPlan === 'pro'
+                  ? 'border-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xl ring-2 ring-emerald-500/30'
+                  : !isTrial && currentPlan === 'pro'
+                  ? 'border-emerald-500/40 bg-emerald-500/5 dark:bg-emerald-500/10'
+                  : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 hover:border-emerald-500/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/40'
               }`}
             >
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-gradient-to-r from-emerald-600 to-teal-500 text-white text-[10px] font-black rounded-full shadow-md uppercase tracking-wider flex items-center gap-1">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-gradient-to-r from-emerald-600 to-teal-500 text-white text-[10px] font-black rounded-full shadow-md uppercase tracking-wider flex items-center gap-1 z-10">
                 <Sparkles className="w-3 h-3 text-amber-300 fill-amber-300" />
                 <span>Mais Escolhido</span>
               </div>
@@ -291,7 +337,14 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                   <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                     PMEs & Expansão
                   </span>
-                  <Crown className="w-4 h-4 text-emerald-500" />
+                  {selectedPlan === 'pro' ? (
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                      <Check className="w-3 h-3 stroke-[3]" />
+                      Selecionado
+                    </span>
+                  ) : (
+                    <Crown className="w-4 h-4 text-emerald-500" />
+                  )}
                 </div>
 
                 <h4 className="text-lg font-extrabold text-slate-900 dark:text-white mt-3">
@@ -359,8 +412,15 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     href={getStripeCheckoutUrl('pro')}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={() => updateSubscription('pro', 'active')}
-                    className="w-full py-2.5 text-xs font-extrabold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1.5 transition-all"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateSubscription('pro', 'active');
+                    }}
+                    className={`w-full py-2.5 text-xs font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+                      selectedPlan === 'pro'
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30'
+                        : 'bg-emerald-600/90 hover:bg-emerald-600 text-white shadow-md'
+                    }`}
                   >
                     <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
                     <span>Assinar Pro com Stripe</span>
@@ -372,10 +432,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
 
             {/* COLUMN 4: BUSINESS */}
             <div
-              className={`p-5 rounded-2xl border flex flex-col justify-between relative transition-all ${
-                !isTrial && currentPlan === 'business'
-                  ? 'border-emerald-500 bg-emerald-500/5 dark:bg-emerald-500/10 shadow-lg ring-1 ring-emerald-500'
-                  : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 hover:border-slate-300 dark:hover:border-slate-700'
+              onClick={() => setSelectedPlan('business')}
+              className={`p-5 rounded-2xl border-2 flex flex-col justify-between relative transition-all cursor-pointer select-none ${
+                selectedPlan === 'business'
+                  ? 'border-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xl ring-2 ring-emerald-500/30'
+                  : !isTrial && currentPlan === 'business'
+                  ? 'border-emerald-500/40 bg-emerald-500/5 dark:bg-emerald-500/10'
+                  : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 hover:border-emerald-500/40 hover:bg-slate-50/50 dark:hover:bg-slate-800/40'
               }`}
             >
               <div>
@@ -383,7 +446,14 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                   <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 border border-blue-500/30">
                     Controladoria & Escala
                   </span>
-                  <Building2 className="w-4 h-4 text-blue-500" />
+                  {selectedPlan === 'business' ? (
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                      <Check className="w-3 h-3 stroke-[3]" />
+                      Selecionado
+                    </span>
+                  ) : (
+                    <Building2 className="w-4 h-4 text-blue-500" />
+                  )}
                 </div>
 
                 <h4 className="text-lg font-extrabold text-slate-900 dark:text-white mt-3">
@@ -451,15 +521,93 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     href={getStripeCheckoutUrl('business')}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={() => updateSubscription('business', 'active')}
-                    className="w-full py-2.5 text-xs font-extrabold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/25 flex items-center justify-center gap-1.5 transition-all"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateSubscription('business', 'active');
+                    }}
+                    className={`w-full py-2.5 text-xs font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+                      selectedPlan === 'business'
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30'
+                        : 'bg-emerald-600/90 hover:bg-emerald-600 text-white shadow-md'
+                    }`}
                   >
                     <Building2 className="w-3.5 h-3.5 text-emerald-200" />
-                    <span>Assinar Business com Stripe</span>
+                    <span>Assinar Business</span>
                     <ExternalLink className="w-3 h-3 text-emerald-200 ml-0.5" />
                   </a>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* SELECTED PLAN HIGHLIGHT & DIRECT ACTION BAR */}
+          <div className="p-4 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/5 dark:from-emerald-500/15 dark:to-teal-500/10 rounded-2xl border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                {selectedPlan === 'trial' && <Clock className="w-5 h-5" />}
+                {selectedPlan === 'starter' && <CreditCard className="w-5 h-5" />}
+                {selectedPlan === 'pro' && <Zap className="w-5 h-5 fill-amber-300 text-amber-300" />}
+                {selectedPlan === 'business' && <Building2 className="w-5 h-5" />}
+              </div>
+              <div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  Plano Selecionado para Assinatura:
+                </div>
+                <div className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span className="uppercase text-emerald-600 dark:text-emerald-400">
+                    PROSPER {selectedPlan === 'trial' ? 'TESTE GRÁTIS' : selectedPlan.toUpperCase()}
+                  </span>
+                  <span className="text-slate-300 dark:text-slate-700">•</span>
+                  <span className="font-mono">
+                    {selectedPlan === 'trial' ? 'R$ 0 (14 dias)' : `R$ ${getSelectedPlanPrice()}/mês`}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full sm:w-auto flex items-center gap-2">
+              {selectedPlan === 'trial' ? (
+                isTrial ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full sm:w-auto px-6 py-2.5 text-xs font-bold rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center justify-center gap-2 cursor-default"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Plano Atual em Teste ({remainingDays}d)</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleStartTrial}
+                    className="w-full sm:w-auto px-6 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all"
+                  >
+                    <span>Iniciar Teste Grátis de 14 Dias</span>
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                  </button>
+                )
+              ) : !isTrial && currentPlan === selectedPlan ? (
+                <button
+                  type="button"
+                  disabled
+                  className="w-full sm:w-auto px-6 py-2.5 text-xs font-bold rounded-xl bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center justify-center gap-2 cursor-default"
+                >
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  <span>Seu Plano Atual Ativo</span>
+                </button>
+              ) : (
+                <a
+                  href={getStripeCheckoutUrl(selectedPlan as 'starter' | 'pro' | 'business')}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => updateSubscription(selectedPlan as 'starter' | 'pro' | 'business', 'active')}
+                  className="w-full sm:w-auto px-6 py-2.5 text-xs font-extrabold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>Assinar {selectedPlan.toUpperCase()} com Stripe (Cartão)</span>
+                  <ExternalLink className="w-4 h-4 ml-0.5" />
+                </a>
+              )}
             </div>
           </div>
 
