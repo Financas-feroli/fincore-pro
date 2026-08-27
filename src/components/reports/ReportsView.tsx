@@ -20,7 +20,7 @@ export const ReportsView: React.FC = () => {
 
   const { organization, isDemoMode } = useAuth();
   const isTrial = isDemoMode || organization?.subscriptionStatus === 'trialing';
-  const planFeatures = getPlanFeatures(organization?.plan || 'pro', isTrial);
+  const planFeatures = getPlanFeatures(organization?.plan || 'pro', isTrial, organization?.trialEndsAt);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [activeReport, setActiveReport] = useState<'dre' | 'cashFlow' | 'costCenters'>('dre');
   const [selectedMonth, setSelectedMonth] = useState('2026-08');

@@ -33,7 +33,7 @@ export const CategoriesView: React.FC = () => {
 
   const { organization, isDemoMode } = useAuth();
   const isTrial = isDemoMode || organization?.subscriptionStatus === 'trialing';
-  const planFeatures = getPlanFeatures(organization?.plan || 'pro', isTrial);
+  const planFeatures = getPlanFeatures(organization?.plan || 'pro', isTrial, organization?.trialEndsAt);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'categories' | 'costCenters'>('categories');
 

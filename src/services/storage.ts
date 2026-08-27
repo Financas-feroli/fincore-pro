@@ -228,15 +228,18 @@ export const storageService = {
       console.warn('Error reading stripe links:', e);
     }
 
+    // ⚠️ STRIPE TEST MODE — Replace with production Price Links from your Stripe Dashboard
     if (cycle === 'yearly') {
       return {
-        starter: 'https://buy.stripe.com/test_28EeVc5greGsaGf3wydMI00',
-        pro: 'https://buy.stripe.com/test_bJefZg24ffKw8y7ffgdMI01',
-        business: 'https://buy.stripe.com/test_cNicN4eR1eGs6pZ3wydMI02',
+        // TODO: Replace with yearly Stripe Payment Links from dashboard.stripe.com
+        starter: 'https://buy.stripe.com/test_YEARLY_STARTER_PLACEHOLDER',
+        pro: 'https://buy.stripe.com/test_YEARLY_PRO_PLACEHOLDER',
+        business: 'https://buy.stripe.com/test_YEARLY_BUSINESS_PLACEHOLDER',
       };
     }
 
     return {
+      // TODO: Replace with monthly Stripe Payment Links from dashboard.stripe.com
       starter: 'https://buy.stripe.com/test_28EeVc5greGsaGf3wydMI00',
       pro: 'https://buy.stripe.com/test_bJefZg24ffKw8y7ffgdMI01',
       business: 'https://buy.stripe.com/test_cNicN4eR1eGs6pZ3wydMI02',

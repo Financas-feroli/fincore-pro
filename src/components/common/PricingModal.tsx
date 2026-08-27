@@ -15,6 +15,7 @@ import { Modal } from './Modal';
 import { useAuth } from '../../context/AuthContext';
 import { useFinance } from '../../context/FinanceContext';
 import { storageService } from '../../services/storage';
+import { PLAN_PRICING } from '../../utils/planPermissions';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -54,15 +55,23 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
     remainingDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
   }
 
-  // Get Stripe checkout URL with dynamic parameters
+  // Get Stripe checkout URL with dynamic parameters and fraud-prevention nonce
   const getStripeCheckoutUrl = (planId: 'starter' | 'pro' | 'business') => {
     const links = storageService.getStripeLinks(billingCycle);
     const baseLink =
       links[planId] || 'https://buy.stripe.com/test_bJefZg24ffKw8y7ffgdMI01';
 
+    // Generate a unique nonce for this checkout session
+    const nonce = `ck_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+    sessionStorage.setItem('prosper_checkout_nonce', nonce);
+
     const params = new URLSearchParams();
     if (user?.email) params.append('prefilled_email', user.email);
     if (organization?.id) params.append('client_reference_id', organization.id);
+
+    // Build success URL with nonce for validation on return
+    const returnUrl = `${window.location.origin}/?checkout=success&plan=${planId}&nonce=${nonce}`;
+    params.append('success_url', returnUrl);
 
     return `${baseLink}${baseLink.includes('?') ? '&' : '?'}${params.toString()}`;
   };
@@ -286,13 +295,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-xs font-semibold text-slate-400">R$</span>
                       <span className="text-3xl font-extrabold font-mono text-slate-900 dark:text-white">
-                        39
+                        {PLAN_PRICING.starter.yearly}
                       </span>
                       <span className="text-xs text-slate-400">/mês</span>
-                      <span className="text-xs line-through text-slate-400 ml-1">R$ 49</span>
+                      <span className="text-xs line-through text-slate-400 ml-1">R$ {PLAN_PRICING.starter.monthly}</span>
                     </div>
                     <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block mt-0.5 whitespace-nowrap">
-                      R$ 470/ano em 1x • <strong>Economize R$ 118</strong>
+                      R$ {PLAN_PRICING.starter.yearlyTotal}/ano em 1x • <strong>Economize R$ {PLAN_PRICING.starter.yearlySavings}</strong>
                     </span>
                   </div>
                 ) : (
@@ -300,7 +309,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     <div className="flex items-baseline gap-1">
                       <span className="text-xs font-semibold text-slate-400">R$</span>
                       <span className="text-3xl font-extrabold font-mono text-slate-900 dark:text-white">
-                        49
+                        {PLAN_PRICING.starter.monthly}
                       </span>
                       <span className="text-xs text-slate-400">/mês</span>
                     </div>
@@ -421,13 +430,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-xs font-semibold text-slate-400">R$</span>
                       <span className="text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
-                        77
+                        {PLAN_PRICING.pro.yearly}
                       </span>
                       <span className="text-xs text-slate-400">/mês</span>
-                      <span className="text-xs line-through text-slate-400 ml-1">R$ 97</span>
+                      <span className="text-xs line-through text-slate-400 ml-1">R$ {PLAN_PRICING.pro.monthly}</span>
                     </div>
                     <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block mt-0.5 whitespace-nowrap">
-                      R$ 930/ano em 1x • <strong>Economize R$ 234</strong>
+                      R$ {PLAN_PRICING.pro.yearlyTotal}/ano em 1x • <strong>Economize R$ {PLAN_PRICING.pro.yearlySavings}</strong>
                     </span>
                   </div>
                 ) : (
@@ -435,7 +444,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     <div className="flex items-baseline gap-1">
                       <span className="text-xs font-semibold text-slate-400">R$</span>
                       <span className="text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
-                        97
+                        {PLAN_PRICING.pro.monthly}
                       </span>
                       <span className="text-xs text-slate-400">/mês</span>
                     </div>
@@ -551,13 +560,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-xs font-semibold text-slate-400">R$</span>
                       <span className="text-3xl font-extrabold font-mono text-slate-900 dark:text-white">
-                        157
+                        {PLAN_PRICING.business.yearly}
                       </span>
                       <span className="text-xs text-slate-400">/mês</span>
-                      <span className="text-xs line-through text-slate-400 ml-1">R$ 197</span>
+                      <span className="text-xs line-through text-slate-400 ml-1">R$ {PLAN_PRICING.business.monthly}</span>
                     </div>
                     <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block mt-0.5 whitespace-nowrap">
-                      R$ 1.890/ano em 1x • <strong>Economize R$ 474</strong>
+                      R$ {PLAN_PRICING.business.yearlyTotal.toLocaleString('pt-BR')}/ano em 1x • <strong>Economize R$ {PLAN_PRICING.business.yearlySavings}</strong>
                     </span>
                   </div>
                 ) : (
@@ -565,7 +574,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     <div className="flex items-baseline gap-1">
                       <span className="text-xs font-semibold text-slate-400">R$</span>
                       <span className="text-3xl font-extrabold font-mono text-slate-900 dark:text-white">
-                        197
+                        {PLAN_PRICING.business.monthly}
                       </span>
                       <span className="text-xs text-slate-400">/mês</span>
                     </div>
