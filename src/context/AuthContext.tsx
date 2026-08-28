@@ -10,6 +10,8 @@ interface AuthContextType {
   organization: Organization | null;
   isDemoMode: boolean;
   isLoading: boolean;
+  isRecoveryMode: boolean;
+  setIsRecoveryMode: (active: boolean) => void;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (
     email: string,
@@ -21,6 +23,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   enterDemoMode: () => void;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
   updateSubscription: (
     plan: 'starter' | 'pro' | 'business',
     status?: 'active' | 'trialing',
@@ -105,6 +108,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return getStoredOrganization(null, null, isDemo);
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isRecoveryMode, setIsRecoveryMode] = useState<boolean>(() => {
+    return (
+      window.location.hash.includes('type=recovery') ||
+      window.location.search.includes('recovery=true') ||
+      window.location.search.includes('type=recovery')
+    );
+  });
 
   // Enter Demo Mode
   const enterDemoMode = () => {
@@ -302,7 +312,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // 2. Listen to auth state changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveryMode(true);
+      }
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -493,11 +506,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setOrganization(guestOrg);
   };
 
-  // Reset Password
+  // Reset Password (sends email with recovery link)
   const resetPassword = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      return { error };
+      const normalizedEmail = email.trim().toLowerCase();
+      const redirectTo = `${window.location.origin}/?recovery=true`;
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo,
+      });
+      if (error) throw error;
+      return { error: null };
+    } catch (err: any) {
+      return { error: err };
+    }
+  };
+
+  // Update Password (used when user arrives via recovery link)
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (error) throw error;
+      setIsRecoveryMode(false);
+      // Clean query and hash
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return { error: null };
     } catch (err: any) {
       return { error: err };
     }
@@ -512,11 +546,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         organization,
         isDemoMode,
         isLoading,
+        isRecoveryMode,
+        setIsRecoveryMode,
         signIn,
         signUp,
         signOut,
         enterDemoMode,
         resetPassword,
+        updatePassword,
         updateSubscription,
       }}
     >

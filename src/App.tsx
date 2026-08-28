@@ -17,6 +17,7 @@ import { SettingsView } from './components/settings/SettingsView';
 import { LoginView } from './components/auth/LoginView';
 import { RegisterView } from './components/auth/RegisterView';
 import { ForgotPasswordModal } from './components/auth/ForgotPasswordModal';
+import { SetNewPasswordModal } from './components/auth/SetNewPasswordModal';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 const AppContent: React.FC = () => {
@@ -97,7 +98,7 @@ const AppContent: React.FC = () => {
 };
 
 const AuthGate: React.FC = () => {
-  const { user, isDemoMode, enterDemoMode, isLoading } = useAuth();
+  const { user, isDemoMode, enterDemoMode, isLoading, isRecoveryMode, setIsRecoveryMode } = useAuth();
   const [authView, setAuthView] = useState<'login' | 'register'>('login');
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
 
@@ -130,6 +131,10 @@ const AuthGate: React.FC = () => {
           isOpen={isForgotPasswordOpen}
           onClose={() => setIsForgotPasswordOpen(false)}
         />
+        <SetNewPasswordModal
+          isOpen={isRecoveryMode}
+          onClose={() => setIsRecoveryMode(false)}
+        />
       </>
     );
   }
@@ -137,6 +142,10 @@ const AuthGate: React.FC = () => {
   return (
     <FinanceProvider>
       <AppContent />
+      <SetNewPasswordModal
+        isOpen={isRecoveryMode}
+        onClose={() => setIsRecoveryMode(false)}
+      />
     </FinanceProvider>
   );
 };
