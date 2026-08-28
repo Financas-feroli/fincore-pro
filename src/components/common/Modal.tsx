@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -41,17 +42,17 @@ export const Modal: React.FC<ModalProps> = ({
     '5xl': 'max-w-7xl',
   }[maxWidth];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+  const modalContent = (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-950/80 backdrop-blur-md transition-opacity duration-300 animate-fade-in"
+        className="fixed inset-0 bg-slate-950/80 backdrop-blur-md transition-opacity duration-300 animate-fade-in z-[100]"
         onClick={onClose}
       />
 
       {/* Modal Card */}
       <div
-        className={`relative w-full ${maxWidthClasses} bg-white dark:bg-[#0f1523] border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden transition-all transform scale-100 z-10 my-6`}
+        className={`relative w-full ${maxWidthClasses} bg-white dark:bg-[#0f1523] border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden transition-all transform scale-100 z-[101] my-6`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -79,4 +80,8 @@ export const Modal: React.FC<ModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };
