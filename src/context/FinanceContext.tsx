@@ -13,6 +13,18 @@ import { storageService, AppBackupData } from '../services/storage';
 import { useAuth } from './AuthContext';
 import { calculateCashFlowAndSummary } from '../utils/cashFlowCalculator';
 import { getTodayDateString, addMonthsClampDay } from '../utils/formatters';
+import {
+  isCloudSyncEnabled,
+  syncTransactionsToSupabase,
+  syncAccountsToSupabase,
+  syncCategoriesToSupabase,
+  syncCostCentersToSupabase,
+  syncContactsToSupabase,
+  syncCompanyProfileToSupabase,
+  deleteTransactionFromSupabase,
+  deleteMultipleTransactionsFromSupabase,
+  deleteAccountFromSupabase,
+} from '../services/supabaseSync';
 
 export type NavTab =
   | 'dashboard'
@@ -263,35 +275,55 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return calculateCashFlowAndSummary(transactions, accounts);
   }, [transactions, accounts]);
 
-  // Sync to storage with active tenant isolation
+  // Sync to storage with active tenant isolation + optional cloud sync
+  const orgId = organization?.id;
+
   const syncTransactions = (newTxns: Transaction[]) => {
     setTransactions(newTxns);
     storageService.saveTransactions(newTxns, activeTenantId);
+    if (isCloudSyncEnabled() && orgId) {
+      syncTransactionsToSupabase(newTxns, orgId);
+    }
   };
 
   const syncAccounts = (newAccs: BankAccount[]) => {
     setAccounts(newAccs);
     storageService.saveAccounts(newAccs, activeTenantId);
+    if (isCloudSyncEnabled() && orgId) {
+      syncAccountsToSupabase(newAccs, orgId);
+    }
   };
 
   const syncCategories = (newCats: Category[]) => {
     setCategories(newCats);
     storageService.saveCategories(newCats, activeTenantId);
+    if (isCloudSyncEnabled() && orgId) {
+      syncCategoriesToSupabase(newCats, orgId);
+    }
   };
 
   const syncCostCenters = (newCCs: CostCenter[]) => {
     setCostCenters(newCCs);
     storageService.saveCostCenters(newCCs, activeTenantId);
+    if (isCloudSyncEnabled() && orgId) {
+      syncCostCentersToSupabase(newCCs, orgId);
+    }
   };
 
   const syncContacts = (newConts: Contact[]) => {
     setContacts(newConts);
     storageService.saveContacts(newConts, activeTenantId);
+    if (isCloudSyncEnabled() && orgId) {
+      syncContactsToSupabase(newConts, orgId);
+    }
   };
 
   const syncCompany = (newComp: CompanyProfile) => {
     setCompanyProfile(newComp);
     storageService.saveCompany(newComp, activeTenantId);
+    if (isCloudSyncEnabled() && orgId) {
+      syncCompanyProfileToSupabase(newComp, orgId);
+    }
   };
 
   // Quick Entry & Edit Transaction Handlers
@@ -745,7 +777,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     transactions.forEach((txn) => {
-      if (txn.status !== 'paid' || txn.status === 'cancelled') return;
+      if (txn.status !== 'paid') return;
       if (txn.type === 'income') {
         balanceMap.set(txn.accountId, (balanceMap.get(txn.accountId) || 0) + txn.amount);
       } else if (txn.type === 'expense') {

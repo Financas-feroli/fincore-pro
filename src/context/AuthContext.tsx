@@ -168,15 +168,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         prev.id !== 'org-default' &&
         prev.id !== 'org-prosper-demo'
       ) {
+        const updatePayload: Record<string, unknown> = {
+          plan,
+          subscription_status: status,
+        };
+        // Sync trial_ends_at to Supabase so it persists across devices
+        if (trialEndsAt) {
+          updatePayload.trial_ends_at = trialEndsAt;
+        }
+
         supabase
           .from('organizations')
-          .update({
-            plan,
-            subscription_status: status,
-          })
+          .update(updatePayload)
           .eq('id', prev.id)
           .then(({ error }) => {
-            if (error) console.warn('Could not sync subscription to Supabase:', error);
+            if (error) {
+              console.error('[PROSPER] Falha ao sincronizar plano com Supabase:', error.message);
+              // Retry once after 3 seconds for transient failures
+              setTimeout(() => {
+                supabase
+                  .from('organizations')
+                  .update(updatePayload)
+                  .eq('id', prev.id!)
+                  .then(({ error: retryError }) => {
+                    if (retryError) {
+                      console.error('[PROSPER] Retry falhou:', retryError.message);
+                    }
+                  });
+              }, 3000);
+            }
           });
       }
 
@@ -211,9 +231,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: org.name || currentUser.user_metadata?.company_name || 'Minha Empresa',
           tradeName: org.trade_name || currentUser.user_metadata?.company_name || 'Minha Empresa',
           document: org.document || currentUser.user_metadata?.document,
-          plan: localOrg?.plan || org.plan || 'pro',
-          subscriptionStatus: localOrg?.subscriptionStatus || org.subscription_status || 'trialing',
-          trialEndsAt: localOrg?.trialEndsAt,
+          // Supabase is source of truth for plan; localStorage is fallback only
+          plan: org.plan || localOrg?.plan || 'pro',
+          subscriptionStatus: org.subscription_status || localOrg?.subscriptionStatus || 'trialing',
+          // Load trialEndsAt from Supabase first, then localStorage fallback
+          trialEndsAt: org.trial_ends_at || localOrg?.trialEndsAt,
           createdAt: org.created_at,
         };
 
