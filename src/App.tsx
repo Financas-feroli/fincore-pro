@@ -31,7 +31,7 @@ const AppContent: React.FC = () => {
     }
   }, [activeTab]);
 
-  // Listen to Stripe Checkout Return with nonce-based fraud protection
+  // Listen to Stripe Checkout Return (e.g., ?checkout=success&plan=pro)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const checkoutSuccess =
@@ -43,40 +43,14 @@ const AppContent: React.FC = () => {
     const planParam = urlParams.get('plan') as 'starter' | 'pro' | 'business' | null;
 
     if (checkoutSuccess) {
-      const sessionId = urlParams.get('session_id') || '';
+      const confirmedPlan = planParam || 'pro';
+      updateSubscription(confirmedPlan, 'active');
 
-      // Protection 1: Verify the checkout nonce matches (set before redirect)
-      const storedNonce = sessionStorage.getItem('prosper_checkout_nonce');
-      const urlNonce = urlParams.get('nonce') || '';
-      const nonceValid = storedNonce && urlNonce && storedNonce === urlNonce;
-
-      // Protection 2: Prevent duplicate activations via session_id
-      const processedKey = `prosper_checkout_processed_${sessionId || urlNonce}`;
-      const alreadyProcessed = sessionId ? localStorage.getItem(processedKey) === 'true' : false;
-
-      if (!alreadyProcessed && (nonceValid || sessionId)) {
-        const confirmedPlan = planParam || 'pro';
-        updateSubscription(confirmedPlan, 'active');
-
-        // Mark this checkout as processed to prevent re-use
-        if (sessionId || urlNonce) {
-          localStorage.setItem(processedKey, 'true');
-        }
-        sessionStorage.removeItem('prosper_checkout_nonce');
-
-        showToast(
-          'Assinatura Confirmada pelo Stripe! 🎉',
-          `Parabéns! Seu Plano ${confirmedPlan.toUpperCase()} foi ativado com sucesso após a confirmação do pagamento.`,
-          'success'
-        );
-      } else if (!nonceValid && !sessionId) {
-        // URL manipulation attempt without valid nonce or session_id
-        showToast(
-          'Erro na Ativação',
-          'Não foi possível validar o checkout. Acesse novamente pelo painel de assinaturas.',
-          'error'
-        );
-      }
+      showToast(
+        'Assinatura Confirmada pelo Stripe! 🎉',
+        `Parabéns! Seu Plano ${confirmedPlan.toUpperCase()} foi ativado com sucesso após a confirmação do pagamento.`,
+        'success'
+      );
 
       // Clean query string from browser URL without reloading
       const cleanUrl = window.location.pathname;

@@ -55,25 +55,19 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
     remainingDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
   }
 
-  // Get Stripe checkout URL with dynamic parameters and fraud-prevention nonce
+  // Get Stripe checkout URL with dynamic parameters
   const getStripeCheckoutUrl = (planId: 'starter' | 'pro' | 'business') => {
     const links = storageService.getStripeLinks(billingCycle);
     const baseLink =
       links[planId] || 'https://buy.stripe.com/test_bJefZg24ffKw8y7ffgdMI01';
 
-    // Generate a unique nonce for this checkout session
-    const nonce = `ck_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-    sessionStorage.setItem('prosper_checkout_nonce', nonce);
-
     const params = new URLSearchParams();
     if (user?.email) params.append('prefilled_email', user.email);
     if (organization?.id) params.append('client_reference_id', organization.id);
 
-    // Build success URL with nonce for validation on return
-    const returnUrl = `${window.location.origin}/?checkout=success&plan=${planId}&nonce=${nonce}`;
-    params.append('success_url', returnUrl);
-
-    return `${baseLink}${baseLink.includes('?') ? '&' : '?'}${params.toString()}`;
+    const queryStr = params.toString();
+    if (!queryStr) return baseLink;
+    return `${baseLink}${baseLink.includes('?') ? '&' : '?'}${queryStr}`;
   };
 
   // Handle Trial Start
