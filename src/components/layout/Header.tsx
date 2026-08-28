@@ -13,10 +13,16 @@ import {
   LogOut,
   User,
   Building,
+  Crown,
+  Settings,
+  ShieldCheck,
+  ChevronRight,
+  X,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
 import { DateRangeSelector } from '../common/DateRangeSelector';
+import { PricingModal } from '../common/PricingModal';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 
 export const Header: React.FC = () => {
@@ -39,6 +45,7 @@ export const Header: React.FC = () => {
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
 
   const userInitial = isDemoMode
     ? 'T'
@@ -47,6 +54,16 @@ export const Header: React.FC = () => {
     : user?.email
     ? user.email.charAt(0).toUpperCase()
     : 'P';
+
+  const displayName = isDemoMode
+    ? 'Gestor (Conta de Teste)'
+    : profile?.fullName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Gestor';
+
+  const userEmail = isDemoMode ? 'teste@prosper.com.br' : user?.email || 'admin@empresa.com.br';
+  const orgName = isDemoMode ? 'PROSPER Soluções (Modo Teste)' : organization?.name || user?.user_metadata?.company_name || 'PROSPER Soluções';
+  const currentPlan = (organization?.plan || 'pro').toUpperCase();
+  const isTrial = organization?.subscriptionStatus === 'trialing';
+  const statusFormatted = isDemoMode ? 'Demo' : isTrial ? 'Teste Grátis' : 'Ativo';
 
   // Global Keyboard Shortcuts (N = New, / = Search)
   useEffect(() => {
@@ -285,83 +302,181 @@ export const Header: React.FC = () => {
           {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
         </button>
 
-        {/* User Profile & Logout Menu */}
+        {/* User Profile & Google-Styled Account Menu */}
         <div className="relative pl-2 border-l border-slate-200 dark:border-slate-800 flex items-center gap-2">
           <button
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="flex items-center gap-2 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
           >
-            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-black text-xs flex items-center justify-center shadow-sm ring-2 ring-emerald-500/20">
               {userInitial}
             </div>
-            <div className="hidden lg:block text-left">
+            <div className="hidden lg:block text-left pr-1">
               <p className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-none truncate max-w-[120px]">
-                {isDemoMode ? 'Conta Teste' : profile?.fullName || user?.email?.split('@')[0] || 'Gestor'}
+                {displayName.split(' ')[0]}
               </p>
               <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold leading-none">
-                Plano {(organization?.plan || 'pro').toUpperCase()} {isDemoMode ? '(Demo)' : organization?.subscriptionStatus === 'active' ? '(Ativo)' : '(Teste)'}
+                {currentPlan} {isDemoMode ? '(Demo)' : isTrial ? '(Teste)' : '(Ativo)'}
               </span>
             </div>
           </button>
 
           {isUserMenuOpen && (
             <>
-              <div className="fixed inset-0 z-20" onClick={() => setIsUserMenuOpen(false)} />
-              <div className="absolute right-0 mt-2 top-full w-64 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-30 py-2 animate-fade-in">
-                <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                      {isDemoMode ? 'Gestor (Conta de Teste)' : profile?.fullName || 'Usuário Gestor'}
-                    </p>
-                    {isDemoMode && (
-                      <span className="px-1.5 py-0.5 text-[9px] font-black uppercase bg-amber-500/15 text-amber-600 dark:text-amber-300 rounded border border-amber-500/30">
-                        Teste
+              {/* Backdrop */}
+              <div
+                className="fixed inset-0 z-30 bg-black/10 dark:bg-black/40 backdrop-blur-[1px]"
+                onClick={() => setIsUserMenuOpen(false)}
+              />
+
+              {/* Google-Styled Account Card */}
+              <div className="absolute right-0 mt-3 top-full w-80 sm:w-92 bg-[#f8fafd] dark:bg-[#181d26] border border-slate-200/90 dark:border-slate-800 rounded-[28px] shadow-2xl shadow-slate-950/25 z-40 p-3.5 space-y-3 animate-fade-in text-slate-800 dark:text-slate-100">
+                {/* Header: Email & Close */}
+                <div className="flex items-center justify-between px-2 pt-1">
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate max-w-[240px]">
+                    {userEmail}
+                  </span>
+                  <button
+                    onClick={() => setIsUserMenuOpen(false)}
+                    className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors"
+                    title="Fechar"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Main Centered Account Card */}
+                <div className="bg-white dark:bg-[#11151c] rounded-2xl p-5 border border-slate-200/60 dark:border-slate-800/80 shadow-xs flex flex-col items-center text-center">
+                  {/* Large Centered Avatar */}
+                  <div className="relative">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 text-white font-black text-2xl flex items-center justify-center shadow-md ring-4 ring-emerald-500/20 dark:ring-emerald-400/20">
+                      {userInitial}
+                    </div>
+                    {isDemoMode ? (
+                      <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 bg-amber-500 text-white text-[8px] font-black uppercase rounded-full shadow-sm">
+                        Demo
+                      </span>
+                    ) : (
+                      <span
+                        className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center ring-2 ring-white dark:ring-[#11151c]"
+                        title="Conta Verificada"
+                      >
+                        <ShieldCheck className="w-3 h-3" />
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                    {isDemoMode ? 'teste@prosper.com.br' : user?.email || 'admin@empresa.com'}
+
+                  {/* Name Greeting */}
+                  <h3 className="text-base font-extrabold text-slate-900 dark:text-white mt-3 tracking-tight">
+                    Olá, {displayName.split(' ')[0]}!
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate max-w-[240px]">
+                    {displayName}
                   </p>
-                  <div className="flex items-center gap-1.5 mt-2 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 w-fit">
-                    <Building className="w-3 h-3" />
-                    <span className="truncate">{isDemoMode ? 'PROSPER Soluções (Modo Teste)' : organization?.name || 'PROSPER Soluções'}</span>
+
+                  {/* Company Badge */}
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 rounded-full text-[11px] font-semibold mt-2.5 border border-slate-200/60 dark:border-slate-700/60 max-w-full">
+                    <Building className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                    <span className="truncate">{orgName}</span>
                   </div>
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[10px]">
-                    <span className="text-slate-400">Plano Atual:</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 uppercase">
-                      {organization?.plan || 'PRO'} • {isDemoMode ? 'Demo' : organization?.subscriptionStatus === 'active' ? 'Ativo' : 'Teste'}
+
+                  {/* Plan Badge */}
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold mt-1.5 uppercase tracking-wide bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    <Crown className="w-3 h-3 text-emerald-500" />
+                    <span>
+                      Plano {currentPlan} • {statusFormatted}
                     </span>
                   </div>
-                </div>
 
-                <div className="p-1">
+                  {/* Google-Style "Gerenciar sua Conta" Button */}
                   <button
                     onClick={() => {
                       setIsUserMenuOpen(false);
                       setActiveTab('settings');
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                    className="mt-4 px-5 py-2 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 rounded-full text-xs font-bold transition-all flex items-center gap-2 shadow-xs"
                   >
-                    <User className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Configurações da Conta</span>
+                    <Settings className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                    <span>Gerenciar sua Conta PROSPER</span>
+                  </button>
+                </div>
+
+                {/* Secondary Quick Action Card */}
+                <div className="bg-white dark:bg-[#11151c] rounded-2xl p-1.5 border border-slate-200/60 dark:border-slate-800/80 shadow-xs space-y-0.5">
+                  <button
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      setIsPricingModalOpen(true);
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2.5 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/70 rounded-xl transition-colors font-medium group text-left"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center flex-shrink-0">
+                        <Crown className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-800 dark:text-slate-200 leading-tight">
+                          Planos & Assinatura
+                        </p>
+                        <p className="text-[10px] text-slate-400">Ver recursos ou alterar plano</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                   </button>
 
                   <button
-                    onClick={async () => {
+                    onClick={() => {
                       setIsUserMenuOpen(false);
-                      await signOut();
+                      setActiveTab('settings');
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors font-semibold"
+                    className="w-full flex items-center justify-between px-3 py-2.5 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/70 rounded-xl transition-colors font-medium group text-left"
                   >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Encerrar Sessão (Sair)</span>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center flex-shrink-0">
+                        <Building className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-800 dark:text-slate-200 leading-tight">
+                          Perfil da Empresa
+                        </p>
+                        <p className="text-[10px] text-slate-400">CNPJ, slogan e preferências</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
                   </button>
+                </div>
+
+                {/* Google-Style Sign Out Button */}
+                <button
+                  onClick={async () => {
+                    setIsUserMenuOpen(false);
+                    await signOut();
+                  }}
+                  className="w-full py-2.5 px-4 bg-white dark:bg-[#11151c] hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 rounded-2xl border border-slate-200/60 dark:border-slate-800/80 font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-xs"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sair da conta</span>
+                </button>
+
+                {/* Google-Style Subtle Footer */}
+                <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 dark:text-slate-500 pt-0.5">
+                  <span>Privacidade</span>
+                  <span>•</span>
+                  <span>Termos de Serviço</span>
+                  <span>•</span>
+                  <span>PROSPER SaaS</span>
                 </div>
               </div>
             </>
           )}
         </div>
       </div>
+
+      {/* Pricing Modal from Header */}
+      <PricingModal
+        isOpen={isPricingModalOpen}
+        onClose={() => setIsPricingModalOpen(false)}
+      />
     </header>
   );
 };
