@@ -225,7 +225,8 @@ export const ReportsView: React.FC = () => {
                 {companyProfile.name}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                CNPJ: {companyProfile.document} • {companyProfile.city}/{companyProfile.state}
+                CNPJ: {companyProfile.document || 'Não informado'}
+                {companyProfile.city ? ` • ${companyProfile.city}${companyProfile.state ? `/${companyProfile.state}` : ''}` : ''}
               </p>
             </div>
           </div>
