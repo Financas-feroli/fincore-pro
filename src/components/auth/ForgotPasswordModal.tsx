@@ -26,7 +26,14 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     const { error } = await resetPassword(email);
 
     if (error) {
-      setErrorMessage(error.message);
+      const msg = (error.message || '').toLowerCase();
+      if (msg.includes('rate limit') || msg.includes('too many') || (error as any).status === 429) {
+        setErrorMessage('Limite de tentativas atingido. Por favor, aguarde 1 minuto antes de solicitar um novo e-mail.');
+      } else if (msg.includes('user not found') || msg.includes('not found')) {
+        setErrorMessage('Não encontramos uma conta cadastrada com este e-mail.');
+      } else {
+        setErrorMessage(error.message || 'Erro ao enviar e-mail de recuperação. Tente novamente.');
+      }
       setIsLoading(false);
     } else {
       setIsSent(true);
