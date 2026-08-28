@@ -24,6 +24,8 @@ import {
   deleteTransactionFromSupabase,
   deleteMultipleTransactionsFromSupabase,
   deleteAccountFromSupabase,
+  loadAllFromSupabase,
+  migrateLocalDataToSupabase,
 } from '../services/supabaseSync';
 
 export type NavTab =
@@ -182,6 +184,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   // Re-load and isolate data whenever the active tenant or user changes
+  // Strategy: Load from localStorage immediately, then hydrate from Supabase if available
   useEffect(() => {
     const companyInfo = {
       name: organization?.name || user?.user_metadata?.company_name || 'Minha Empresa Ltda',
@@ -189,13 +192,35 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       document: organization?.document || user?.user_metadata?.document || '',
       email: user?.email || '',
     };
-    const data = storageService.loadAllData(activeTenantId, companyInfo);
-    setTransactions(data.transactions);
-    setAccounts(data.accounts);
-    setCategories(data.categories);
-    setCostCenters(data.costCenters);
-    setContacts(data.contacts);
-    setCompanyProfile(data.companyProfile);
+
+    // 1. Load from localStorage immediately (fast, synchronous)
+    const localData = storageService.loadAllData(activeTenantId, companyInfo);
+    setTransactions(localData.transactions);
+    setAccounts(localData.accounts);
+    setCategories(localData.categories);
+    setCostCenters(localData.costCenters);
+    setContacts(localData.contacts);
+    setCompanyProfile(localData.companyProfile);
+
+    // 2. If cloud sync is enabled and user has a real org, try loading from Supabase
+    if (isCloudSyncEnabled() && organization?.id && !isDemoMode && activeTenantId !== 'guest') {
+      loadAllFromSupabase(organization.id).then((cloudData) => {
+        if (cloudData) {
+          // Cloud data found — use it as source of truth
+          if (cloudData.transactions && cloudData.transactions.length > 0) {
+            setTransactions(cloudData.transactions);
+            storageService.saveTransactions(cloudData.transactions, activeTenantId);
+          }
+          if (cloudData.accounts && cloudData.accounts.length > 0) {
+            setAccounts(cloudData.accounts);
+            storageService.saveAccounts(cloudData.accounts, activeTenantId);
+          }
+        } else if (localData.transactions.length > 0) {
+          // No cloud data but local data exists — trigger one-time migration
+          migrateLocalDataToSupabase(organization.id, localData);
+        }
+      });
+    }
   }, [activeTenantId, organization?.id, organization?.name]);
 
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
@@ -564,6 +589,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     syncTransactions(transactions.filter((t) => t.id !== id));
+    if (isCloudSyncEnabled()) deleteTransactionFromSupabase(id);
     showToast('Lançamento removido', 'O registro foi excluído.', 'warning');
   };
 
@@ -587,6 +613,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     syncAccounts(updatedAccounts);
     syncTransactions(transactions.filter((t) => !idSet.has(t.id)));
+    if (isCloudSyncEnabled()) deleteMultipleTransactionsFromSupabase(ids);
     showToast('Exclusão em massa', `${ids.length} lançamentos foram excluídos.`, 'warning');
   };
 
@@ -766,6 +793,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
     syncAccounts(accounts.filter((a) => a.id !== id));
+    if (isCloudSyncEnabled()) deleteAccountFromSupabase(id);
     showToast('Conta removida', 'Conta bancária excluída.', 'warning');
   };
 

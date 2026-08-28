@@ -378,3 +378,63 @@ export const deleteAccountFromSupabase = async (accountId: string): Promise<void
     console.error('[PROSPER CloudSync] Delete account error:', err);
   }
 };
+
+// -------------------------------------------------------------------
+// ONE-TIME MIGRATION: localStorage → Supabase
+// -------------------------------------------------------------------
+// Uploads all existing localStorage data to Supabase for users who
+// had data before cloud sync was enabled. Runs only once per org.
+
+interface LocalDataPayload {
+  transactions: Transaction[];
+  accounts: BankAccount[];
+  categories: Category[];
+  costCenters: CostCenter[];
+  contacts: Contact[];
+  companyProfile: CompanyProfile;
+}
+
+export const migrateLocalDataToSupabase = async (
+  organizationId: string,
+  localData: LocalDataPayload
+): Promise<void> => {
+  if (!isCloudSyncEnabled()) return;
+
+  const migrationKey = `prosper_cloud_migrated_${organizationId}`;
+  if (localStorage.getItem(migrationKey) === 'true') {
+    return; // Already migrated
+  }
+
+  console.log('[PROSPER CloudSync] Starting one-time migration to Supabase...');
+
+  try {
+    const results = await Promise.allSettled([
+      localData.transactions.length > 0
+        ? syncTransactionsToSupabase(localData.transactions, organizationId)
+        : Promise.resolve(),
+      localData.accounts.length > 0
+        ? syncAccountsToSupabase(localData.accounts, organizationId)
+        : Promise.resolve(),
+      localData.categories.length > 0
+        ? syncCategoriesToSupabase(localData.categories, organizationId)
+        : Promise.resolve(),
+      localData.costCenters.length > 0
+        ? syncCostCentersToSupabase(localData.costCenters, organizationId)
+        : Promise.resolve(),
+      localData.contacts.length > 0
+        ? syncContactsToSupabase(localData.contacts, organizationId)
+        : Promise.resolve(),
+      syncCompanyProfileToSupabase(localData.companyProfile, organizationId),
+    ]);
+
+    const failures = results.filter((r) => r.status === 'rejected');
+    if (failures.length === 0) {
+      localStorage.setItem(migrationKey, 'true');
+      console.log('[PROSPER CloudSync] ✅ Migration completed successfully!');
+    } else {
+      console.warn(`[PROSPER CloudSync] ⚠️ Migration partially failed (${failures.length} errors). Will retry on next login.`);
+    }
+  } catch (err) {
+    console.error('[PROSPER CloudSync] Migration failed:', err);
+  }
+};
