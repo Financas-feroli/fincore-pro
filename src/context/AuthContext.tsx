@@ -348,7 +348,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Sign Up (Multi-tenant Onboarding)
+  // Sign Up (Multi-tenant Onboarding with strict duplicate prevention)
   const signUp = async (
     email: string,
     password: string,
@@ -360,48 +360,87 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsDemoMode(false);
       sessionStorage.removeItem(DEMO_SESSION_KEY);
 
-      // 1. Create auth user
+      const normalizedEmail = email.trim().toLowerCase();
+
+      // 1. Create auth user in Supabase
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
+        email: normalizedEmail,
         password,
         options: {
           data: {
-            full_name: fullName,
-            company_name: companyName,
-            document: document,
+            full_name: fullName.trim(),
+            company_name: companyName.trim(),
+            document: document.trim(),
           },
         },
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Não foi possível criar o usuário.');
+      // Handle Supabase duplicate email errors
+      if (authError) {
+        const errorMsg = (authError.message || '').toLowerCase();
+        if (
+          errorMsg.includes('already registered') ||
+          errorMsg.includes('already exists') ||
+          errorMsg.includes('user already') ||
+          (authError as any).status === 422
+        ) {
+          throw new Error('Este e-mail já possui uma conta cadastrada. Faça login ou recupere sua senha.');
+        }
+        throw new Error(authError.message || 'Erro ao realizar o cadastro. Tente novamente.');
+      }
+
+      if (!authData.user) {
+        throw new Error('Não foi possível criar o usuário. Tente novamente.');
+      }
+
+      // Check if user already existed in Supabase (identities array is empty when user already exists)
+      if (authData.user.identities && authData.user.identities.length === 0) {
+        throw new Error('Este e-mail já possui uma conta cadastrada. Faça login ou recupere sua senha.');
+      }
 
       const userId = authData.user.id;
 
-      // 2. Insert new organization (14-day trial of Pro)
+      // 2. Check if this user already has an organization (avoid duplicate orgs)
+      const { data: existingMember } = await supabase
+        .from('organization_members')
+        .select('id, organization_id')
+        .eq('user_id', userId)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingMember) {
+        throw new Error('Este e-mail já possui uma empresa cadastrada. Faça login para acessar seu painel.');
+      }
+
+      // 3. Insert new organization (14-day trial of Pro)
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
         .insert({
-          name: companyName,
-          trade_name: companyName,
-          document: document,
+          name: companyName.trim(),
+          trade_name: companyName.trim(),
+          document: document.trim(),
           plan: 'pro',
           subscription_status: 'trialing',
         })
         .select()
         .single();
 
+      if (orgError) {
+        console.error('[PROSPER Auth] Erro ao criar organização:', orgError);
+        throw new Error('Erro ao configurar os dados da empresa. Tente novamente.');
+      }
+
       if (orgData) {
         const orgId = orgData.id;
 
-        // 3. Link user to organization as admin
+        // 4. Link user to organization as admin
         await supabase.from('organization_members').insert({
           organization_id: orgId,
           user_id: userId,
           role: 'admin',
         });
 
-        // 4. Seed initial default bank account
+        // 5. Seed initial default bank account
         await supabase.from('accounts_data').insert({
           id: `acc-main-${Date.now()}`,
           organization_id: orgId,
@@ -415,7 +454,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           is_default: true,
         });
 
-        // 5. Seed essential chart of accounts categories
+        // 6. Seed essential chart of accounts categories
         await supabase.from('categories_data').insert([
           { id: `cat-seed-1`, organization_id: orgId, name: 'Vendas de Produtos & Serviços', type: 'income', group_name: 'Receita Operacional Bruta', color: '#10B981' },
           { id: `cat-seed-2`, organization_id: orgId, name: 'Rendimentos de Aplicações', type: 'income', group_name: 'Receitas Financeiras', color: '#3B82F6' },
@@ -426,13 +465,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           { id: `cat-seed-7`, organization_id: orgId, name: 'Marketing e Anúncios', type: 'expense', group_name: 'Despesas Comerciais', color: '#EC4899' },
           { id: `cat-seed-8`, organization_id: orgId, name: 'Tarifas Bancárias e Juros', type: 'expense', group_name: 'Despesas Financeiras', color: '#EF4444' },
         ]);
-      }
 
-      // Initialize user-scoped storage key
-      getStoredOrganization(userId, orgData?.id, false);
+        // Initialize user-scoped storage key
+        getStoredOrganization(userId, orgData.id, false);
+      }
 
       return { error: null };
     } catch (err: any) {
+      console.warn('[PROSPER Auth] Sign up error:', err?.message || err);
       return { error: err };
     }
   };
