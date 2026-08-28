@@ -72,17 +72,6 @@ export const SettingsView: React.FC = () => {
 
   return (
     <div className="max-w-4xl space-y-6 animate-fade-in pb-16">
-      {/* Settings Title */}
-      <div className="p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
-        <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <Settings className="w-5 h-5 text-emerald-500" />
-          Configurações do Sistema
-        </h3>
-        <p className="text-xs text-slate-400 mt-0.5">
-          Parâmetros cadastrais da empresa, regime tributário, preferências visuais e backups de segurança.
-        </p>
-      </div>
-
       {/* 1. Subscription & Plan Card (SaaS Billing) */}
       <div className="p-6 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/30 border border-slate-800 rounded-2xl shadow-sm text-white space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-slate-800">
