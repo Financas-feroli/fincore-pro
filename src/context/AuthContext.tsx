@@ -402,7 +402,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
         // 4. Seed initial default bank account
-        await supabase.from('accounts').insert({
+        await supabase.from('accounts_data').insert({
+          id: `acc-main-${Date.now()}`,
           organization_id: orgId,
           name: 'Conta Principal PJ',
           bank_name: 'Banco Itaú',
@@ -410,18 +411,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           initial_balance: 0,
           current_balance: 0,
           color: '#10B981',
+          is_active: true,
+          is_default: true,
         });
 
         // 5. Seed essential chart of accounts categories
-        await supabase.from('categories').insert([
-          { organization_id: orgId, name: 'Vendas de Produtos & Serviços', type: 'income', group: 'Receita Operacional Bruta', color: '#10B981' },
-          { organization_id: orgId, name: 'Rendimentos de Aplicações', type: 'income', group: 'Receitas Financeiras', color: '#3B82F6' },
-          { organization_id: orgId, name: 'Impostos e Tributos s/ Venda', type: 'expense', group: 'Deduções da Receita Bruta', color: '#F43F5E' },
-          { organization_id: orgId, name: 'Custos com Fornecedores', type: 'expense', group: 'Custos dos Serviços Prestados', color: '#EA580C' },
-          { organization_id: orgId, name: 'Salários e Encargos', type: 'expense', group: 'Despesas com Pessoal', color: '#8B5CF6' },
-          { organization_id: orgId, name: 'Aluguel, Energia e Internet', type: 'expense', group: 'Despesas Administrativas', color: '#64748B' },
-          { organization_id: orgId, name: 'Marketing e Anúncios', type: 'expense', group: 'Despesas Comerciais', color: '#EC4899' },
-          { organization_id: orgId, name: 'Tarifas Bancárias e Juros', type: 'expense', group: 'Despesas Financeiras', color: '#EF4444' },
+        await supabase.from('categories_data').insert([
+          { id: `cat-seed-1`, organization_id: orgId, name: 'Vendas de Produtos & Serviços', type: 'income', group_name: 'Receita Operacional Bruta', color: '#10B981' },
+          { id: `cat-seed-2`, organization_id: orgId, name: 'Rendimentos de Aplicações', type: 'income', group_name: 'Receitas Financeiras', color: '#3B82F6' },
+          { id: `cat-seed-3`, organization_id: orgId, name: 'Impostos e Tributos s/ Venda', type: 'expense', group_name: 'Deduções da Receita Bruta', color: '#F43F5E' },
+          { id: `cat-seed-4`, organization_id: orgId, name: 'Custos com Fornecedores', type: 'expense', group_name: 'Custos dos Serviços Prestados', color: '#EA580C' },
+          { id: `cat-seed-5`, organization_id: orgId, name: 'Salários e Encargos', type: 'expense', group_name: 'Despesas com Pessoal', color: '#8B5CF6' },
+          { id: `cat-seed-6`, organization_id: orgId, name: 'Aluguel, Energia e Internet', type: 'expense', group_name: 'Despesas Administrativas', color: '#64748B' },
+          { id: `cat-seed-7`, organization_id: orgId, name: 'Marketing e Anúncios', type: 'expense', group_name: 'Despesas Comerciais', color: '#EC4899' },
+          { id: `cat-seed-8`, organization_id: orgId, name: 'Tarifas Bancárias e Juros', type: 'expense', group_name: 'Despesas Financeiras', color: '#EF4444' },
         ]);
       }
 
