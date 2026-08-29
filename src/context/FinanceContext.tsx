@@ -24,6 +24,9 @@ import {
   deleteTransactionFromSupabase,
   deleteMultipleTransactionsFromSupabase,
   deleteAccountFromSupabase,
+  deleteCategoryFromSupabase,
+  deleteCostCenterFromSupabase,
+  deleteContactFromSupabase,
   loadAllFromSupabase,
   migrateLocalDataToSupabase,
 } from '../services/supabaseSync';
@@ -206,7 +209,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (isCloudSyncEnabled() && organization?.id && !isDemoMode && activeTenantId !== 'guest') {
       loadAllFromSupabase(organization.id).then((cloudData) => {
         if (cloudData) {
-          // Cloud data found — use it as source of truth
+          // Cloud data found — use it as source of truth for all entities
           if (cloudData.transactions && cloudData.transactions.length > 0) {
             setTransactions(cloudData.transactions);
             storageService.saveTransactions(cloudData.transactions, activeTenantId);
@@ -214,6 +217,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (cloudData.accounts && cloudData.accounts.length > 0) {
             setAccounts(cloudData.accounts);
             storageService.saveAccounts(cloudData.accounts, activeTenantId);
+          }
+          if (cloudData.categories && cloudData.categories.length > 0) {
+            setCategories(cloudData.categories);
+            storageService.saveCategories(cloudData.categories, activeTenantId);
+          }
+          if (cloudData.costCenters && cloudData.costCenters.length > 0) {
+            setCostCenters(cloudData.costCenters);
+            storageService.saveCostCenters(cloudData.costCenters, activeTenantId);
+          }
+          if (cloudData.contacts && cloudData.contacts.length > 0) {
+            setContacts(cloudData.contacts);
+            storageService.saveContacts(cloudData.contacts, activeTenantId);
+          }
+          if (cloudData.companyProfile) {
+            setCompanyProfile(cloudData.companyProfile);
+            storageService.saveCompany(cloudData.companyProfile, activeTenantId);
           }
         } else if (localData.transactions.length > 0) {
           // No cloud data but local data exists — trigger one-time migration
@@ -860,6 +879,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteCategory = (id: string) => {
     syncCategories(categories.filter((c) => c.id !== id));
+    if (isCloudSyncEnabled()) deleteCategoryFromSupabase(id);
     showToast('Categoria removida', 'Categoria excluída.', 'warning');
   };
 
@@ -881,6 +901,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteContact = (id: string) => {
     syncContacts(contacts.filter((c) => c.id !== id));
+    if (isCloudSyncEnabled()) deleteContactFromSupabase(id);
     showToast('Contato excluído', 'Registro removido.', 'warning');
   };
 
@@ -901,6 +922,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteCostCenter = (id: string) => {
     syncCostCenters(costCenters.filter((cc) => cc.id !== id));
+    if (isCloudSyncEnabled()) deleteCostCenterFromSupabase(id);
     showToast('Centro de Custo removido', 'Registro excluído.', 'warning');
   };
 

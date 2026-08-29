@@ -1,7 +1,7 @@
 /**
  * supabaseSync.ts — Cloud Sync Layer for PROSPER
  *
- * This module provides bidirectional sync between localStorage and Supabase.
+ * This module provides complete bidirectional sync between localStorage and Supabase.
  * It is designed to be enabled via the VITE_ENABLE_CLOUD_SYNC environment variable.
  *
  * Architecture: Write-through pattern
@@ -60,34 +60,47 @@ export const syncTransactionsToSupabase = async (
   try {
     await retryAsync(async () => {
       // Upsert all transactions (insert or update by id)
-      const rows = transactions.map((txn) => ({
-        id: txn.id,
-        organization_id: organizationId,
-        type: txn.type,
-        description: txn.description,
-        amount: txn.amount,
-        date: txn.date,
-        due_date: txn.dueDate,
-        payment_date: txn.paymentDate,
-        status: txn.status,
-        category_id: txn.categoryId,
-        account_id: txn.accountId,
-        target_account_id: txn.targetAccountId,
-        contact_id: txn.contactId,
-        cost_center_id: txn.costCenterId,
-        notes: txn.notes,
-        is_recurring: txn.isRecurring,
-        recurrence_frequency: txn.recurrenceFrequency,
-        parent_transaction_id: txn.parentTransactionId,
-        installment_number: txn.installmentNumber,
-        installment_total: txn.installmentTotal,
-        interest_amount: txn.interestAmount,
-        fine_amount: txn.fineAmount,
-        discount_amount: txn.discountAmount,
-        created_at: txn.createdAt,
-        updated_at: txn.updatedAt,
-        data_json: JSON.stringify(txn), // Full JSON backup for safety
-      }));
+      const rows = transactions.map((txn) => {
+        const isRecurring = Boolean(
+          txn.recurrence && txn.recurrence.frequency !== 'none'
+        );
+        const recurrenceFrequency = txn.recurrence?.frequency || 'none';
+        const parentId =
+          txn.recurrence?.parentId || txn.installment?.parentId || null;
+        const installmentNum = txn.installment?.current || null;
+        const installmentTot = txn.installment?.total || null;
+        const effectiveDate =
+          txn.paymentDate || txn.dueDate || txn.competenceDate || new Date().toISOString().split('T')[0];
+
+        return {
+          id: txn.id,
+          organization_id: organizationId,
+          type: txn.type,
+          description: txn.description,
+          amount: txn.amount,
+          date: effectiveDate,
+          due_date: txn.dueDate,
+          payment_date: txn.paymentDate || null,
+          status: txn.status,
+          category_id: txn.categoryId,
+          account_id: txn.accountId,
+          target_account_id: txn.targetAccountId || null,
+          contact_id: txn.contactId || null,
+          cost_center_id: txn.costCenterId || null,
+          notes: txn.notes || null,
+          is_recurring: isRecurring,
+          recurrence_frequency: recurrenceFrequency,
+          parent_transaction_id: parentId,
+          installment_number: installmentNum,
+          installment_total: installmentTot,
+          interest_amount: txn.interestAmount || 0,
+          fine_amount: txn.fineAmount || 0,
+          discount_amount: txn.discountAmount || 0,
+          created_at: txn.createdAt,
+          updated_at: txn.updatedAt,
+          data_json: JSON.stringify(txn), // Full JSON backup for safety
+        };
+      });
 
       const { error } = await supabase
         .from('transactions')
@@ -115,9 +128,14 @@ export const loadTransactionsFromSupabase = async (
     if (error) throw error;
     if (!data || data.length === 0) return null;
 
-    return data.map((row: { data_json: string }) => JSON.parse(row.data_json) as Transaction);
+    return data.map(
+      (row: { data_json: string }) => JSON.parse(row.data_json) as Transaction
+    );
   } catch (err) {
-    console.error('[PROSPER CloudSync] Failed to load transactions from Supabase:', err);
+    console.error(
+      '[PROSPER CloudSync] Failed to load transactions from Supabase:',
+      err
+    );
     return null;
   }
 };
@@ -142,8 +160,7 @@ export const syncAccountsToSupabase = async (
         initial_balance: acc.initialBalance,
         current_balance: acc.currentBalance,
         color: acc.color,
-        is_active: acc.isActive,
-        is_default: acc.isDefault,
+        is_default: acc.isDefault ?? false,
         data_json: JSON.stringify(acc),
       }));
 
@@ -172,9 +189,14 @@ export const loadAccountsFromSupabase = async (
     if (error) throw error;
     if (!data || data.length === 0) return null;
 
-    return data.map((row: { data_json: string }) => JSON.parse(row.data_json) as BankAccount);
+    return data.map(
+      (row: { data_json: string }) => JSON.parse(row.data_json) as BankAccount
+    );
   } catch (err) {
-    console.error('[PROSPER CloudSync] Failed to load accounts from Supabase:', err);
+    console.error(
+      '[PROSPER CloudSync] Failed to load accounts from Supabase:',
+      err
+    );
     return null;
   }
 };
@@ -211,6 +233,32 @@ export const syncCategoriesToSupabase = async (
   }
 };
 
+export const loadCategoriesFromSupabase = async (
+  organizationId: string
+): Promise<Category[] | null> => {
+  if (!isCloudSyncEnabled()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('categories_data')
+      .select('data_json')
+      .eq('organization_id', organizationId);
+
+    if (error) throw error;
+    if (!data || data.length === 0) return null;
+
+    return data.map(
+      (row: { data_json: string }) => JSON.parse(row.data_json) as Category
+    );
+  } catch (err) {
+    console.error(
+      '[PROSPER CloudSync] Failed to load categories from Supabase:',
+      err
+    );
+    return null;
+  }
+};
+
 // -------------------------------------------------------------------
 // COST CENTERS
 // -------------------------------------------------------------------
@@ -237,6 +285,32 @@ export const syncCostCentersToSupabase = async (
     });
   } catch (err) {
     console.error('[PROSPER CloudSync] Failed to sync cost centers:', err);
+  }
+};
+
+export const loadCostCentersFromSupabase = async (
+  organizationId: string
+): Promise<CostCenter[] | null> => {
+  if (!isCloudSyncEnabled()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('cost_centers_data')
+      .select('data_json')
+      .eq('organization_id', organizationId);
+
+    if (error) throw error;
+    if (!data || data.length === 0) return null;
+
+    return data.map(
+      (row: { data_json: string }) => JSON.parse(row.data_json) as CostCenter
+    );
+  } catch (err) {
+    console.error(
+      '[PROSPER CloudSync] Failed to load cost centers from Supabase:',
+      err
+    );
+    return null;
   }
 };
 
@@ -270,6 +344,32 @@ export const syncContactsToSupabase = async (
   }
 };
 
+export const loadContactsFromSupabase = async (
+  organizationId: string
+): Promise<Contact[] | null> => {
+  if (!isCloudSyncEnabled()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('contacts_data')
+      .select('data_json')
+      .eq('organization_id', organizationId);
+
+    if (error) throw error;
+    if (!data || data.length === 0) return null;
+
+    return data.map(
+      (row: { data_json: string }) => JSON.parse(row.data_json) as Contact
+    );
+  } catch (err) {
+    console.error(
+      '[PROSPER CloudSync] Failed to load contacts from Supabase:',
+      err
+    );
+    return null;
+  }
+};
+
 // -------------------------------------------------------------------
 // COMPANY PROFILE
 // -------------------------------------------------------------------
@@ -281,21 +381,23 @@ export const syncCompanyProfileToSupabase = async (
 
   try {
     await retryAsync(async () => {
-      const { error } = await supabase
-        .from('company_profiles')
-        .upsert(
-          {
-            organization_id: organizationId,
-            name: profile.name,
-            trade_name: profile.tradeName,
-            document: profile.document,
-            email: profile.email,
-            phone: profile.phone,
-            address: profile.address,
-            data_json: JSON.stringify(profile),
-          },
-          { onConflict: 'organization_id' }
-        );
+      const { error } = await supabase.from('company_profiles').upsert(
+        {
+          organization_id: organizationId,
+          name: profile.name,
+          trade_name: profile.tradeName,
+          document: profile.document,
+          email: profile.email,
+          phone: profile.phone,
+          address: profile.address,
+          city: profile.city || null,
+          state: profile.state || null,
+          zip_code: profile.zipCode || null,
+          slogan: profile.slogan || null,
+          data_json: JSON.stringify(profile),
+        },
+        { onConflict: 'organization_id' }
+      );
 
       if (error) throw error;
     });
@@ -304,26 +406,66 @@ export const syncCompanyProfileToSupabase = async (
   }
 };
 
+export const loadCompanyProfileFromSupabase = async (
+  organizationId: string
+): Promise<CompanyProfile | null> => {
+  if (!isCloudSyncEnabled()) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('company_profiles')
+      .select('data_json')
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data || !data.data_json) return null;
+
+    return JSON.parse(data.data_json) as CompanyProfile;
+  } catch (err) {
+    console.error(
+      '[PROSPER CloudSync] Failed to load company profile from Supabase:',
+      err
+    );
+    return null;
+  }
+};
+
 // -------------------------------------------------------------------
-// FULL LOAD — Load all data from Supabase for initial hydration
+// FULL LOAD — Load all data from Supabase for complete initial hydration
 // -------------------------------------------------------------------
 export const loadAllFromSupabase = async (
   organizationId: string
 ): Promise<{
   transactions: Transaction[] | null;
   accounts: BankAccount[] | null;
+  categories: Category[] | null;
+  costCenters: CostCenter[] | null;
+  contacts: Contact[] | null;
+  companyProfile: CompanyProfile | null;
 } | null> => {
   if (!isCloudSyncEnabled()) return null;
 
   try {
-    const [txns, accs] = await Promise.all([
+    const [txns, accs, cats, ccs, conts, comp] = await Promise.all([
       loadTransactionsFromSupabase(organizationId),
       loadAccountsFromSupabase(organizationId),
+      loadCategoriesFromSupabase(organizationId),
+      loadCostCentersFromSupabase(organizationId),
+      loadContactsFromSupabase(organizationId),
+      loadCompanyProfileFromSupabase(organizationId),
     ]);
 
     // Only return if we have at least some data
-    if (txns || accs) {
-      return { transactions: txns, accounts: accs };
+    if (txns || accs || cats || ccs || conts || comp) {
+      return {
+        transactions: txns,
+        accounts: accs,
+        categories: cats,
+        costCenters: ccs,
+        contacts: conts,
+        companyProfile: comp,
+      };
     }
     return null;
   } catch (err) {
@@ -346,7 +488,8 @@ export const deleteTransactionFromSupabase = async (
       .delete()
       .eq('id', transactionId);
 
-    if (error) console.error('[PROSPER CloudSync] Delete transaction failed:', error);
+    if (error)
+      console.error('[PROSPER CloudSync] Delete transaction failed:', error);
   } catch (err) {
     console.error('[PROSPER CloudSync] Delete transaction error:', err);
   }
@@ -369,22 +512,73 @@ export const deleteMultipleTransactionsFromSupabase = async (
   }
 };
 
-export const deleteAccountFromSupabase = async (accountId: string): Promise<void> => {
+export const deleteAccountFromSupabase = async (
+  accountId: string
+): Promise<void> => {
   if (!isCloudSyncEnabled()) return;
   try {
-    const { error } = await supabase.from('accounts_data').delete().eq('id', accountId);
-    if (error) console.error('[PROSPER CloudSync] Delete account failed:', error);
+    const { error } = await supabase
+      .from('accounts_data')
+      .delete()
+      .eq('id', accountId);
+    if (error)
+      console.error('[PROSPER CloudSync] Delete account failed:', error);
   } catch (err) {
     console.error('[PROSPER CloudSync] Delete account error:', err);
+  }
+};
+
+export const deleteCategoryFromSupabase = async (
+  categoryId: string
+): Promise<void> => {
+  if (!isCloudSyncEnabled()) return;
+  try {
+    const { error } = await supabase
+      .from('categories_data')
+      .delete()
+      .eq('id', categoryId);
+    if (error)
+      console.error('[PROSPER CloudSync] Delete category failed:', error);
+  } catch (err) {
+    console.error('[PROSPER CloudSync] Delete category error:', err);
+  }
+};
+
+export const deleteCostCenterFromSupabase = async (
+  costCenterId: string
+): Promise<void> => {
+  if (!isCloudSyncEnabled()) return;
+  try {
+    const { error } = await supabase
+      .from('cost_centers_data')
+      .delete()
+      .eq('id', costCenterId);
+    if (error)
+      console.error('[PROSPER CloudSync] Delete cost center failed:', error);
+  } catch (err) {
+    console.error('[PROSPER CloudSync] Delete cost center error:', err);
+  }
+};
+
+export const deleteContactFromSupabase = async (
+  contactId: string
+): Promise<void> => {
+  if (!isCloudSyncEnabled()) return;
+  try {
+    const { error } = await supabase
+      .from('contacts_data')
+      .delete()
+      .eq('id', contactId);
+    if (error)
+      console.error('[PROSPER CloudSync] Delete contact failed:', error);
+  } catch (err) {
+    console.error('[PROSPER CloudSync] Delete contact error:', err);
   }
 };
 
 // -------------------------------------------------------------------
 // ONE-TIME MIGRATION: localStorage → Supabase
 // -------------------------------------------------------------------
-// Uploads all existing localStorage data to Supabase for users who
-// had data before cloud sync was enabled. Runs only once per org.
-
 interface LocalDataPayload {
   transactions: Transaction[];
   accounts: BankAccount[];
@@ -432,7 +626,9 @@ export const migrateLocalDataToSupabase = async (
       localStorage.setItem(migrationKey, 'true');
       console.log('[PROSPER CloudSync] ✅ Migration completed successfully!');
     } else {
-      console.warn(`[PROSPER CloudSync] ⚠️ Migration partially failed (${failures.length} errors). Will retry on next login.`);
+      console.warn(
+        `[PROSPER CloudSync] ⚠️ Migration partially failed (${failures.length} errors). Will retry on next login.`
+      );
     }
   } catch (err) {
     console.error('[PROSPER CloudSync] Migration failed:', err);
