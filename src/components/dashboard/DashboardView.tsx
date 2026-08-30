@@ -47,6 +47,7 @@ export const DashboardView: React.FC = () => {
     transactions,
     categories,
     companyProfile,
+    dateRange,
     openQuickEntry,
     openEditTransaction,
     openSettlementModal,
@@ -55,7 +56,48 @@ export const DashboardView: React.FC = () => {
     hideBalances,
   } = useFinance();
 
-  const currentMonthStr = new Date().toISOString().substring(0, 7);
+  // Dynamic period metrics strictly respecting the active header dateRange filter
+  const periodMetrics = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    let expectedIncome = 0;
+    let expectedExpense = 0;
+
+    transactions.forEach((txn) => {
+      if (txn.status === 'cancelled' || txn.type === 'transfer') return;
+      const amount = Number(txn.amount) || 0;
+      const effectiveDate = (txn.paymentDate || txn.dueDate || '').split('T')[0];
+
+      if (effectiveDate >= dateRange.start && effectiveDate <= dateRange.end) {
+        if (txn.status === 'paid') {
+          if (txn.type === 'income') income += amount;
+          if (txn.type === 'expense') expense += amount;
+        } else if (txn.status === 'pending') {
+          if (txn.type === 'income') expectedIncome += amount;
+          if (txn.type === 'expense') expectedExpense += amount;
+        }
+      }
+    });
+
+    const roundedIncome = Math.round(income * 100) / 100;
+    const roundedExpense = Math.round(expense * 100) / 100;
+    const net = Math.round((roundedIncome - roundedExpense) * 100) / 100;
+    const roundedExpectedIncome = Math.round(expectedIncome * 100) / 100;
+    const roundedExpectedExpense = Math.round(expectedExpense * 100) / 100;
+
+    return {
+      income: roundedIncome,
+      expense: roundedExpense,
+      net,
+      expectedIncome: roundedExpectedIncome,
+      expectedExpense: roundedExpectedExpense,
+      totalExpectedIncome: Math.round((roundedIncome + roundedExpectedIncome) * 100) / 100,
+      totalExpectedExpense: Math.round((roundedExpense + roundedExpectedExpense) * 100) / 100,
+      marginPercent: roundedIncome > 0 ? Number(((net / roundedIncome) * 100).toFixed(1)) : 0,
+    };
+  }, [transactions, dateRange]);
+
+  const currentMonthStr = dateRange.start.substring(0, 7);
   const dre = calculateDRE(
     transactions,
     categories,
@@ -67,16 +109,16 @@ export const DashboardView: React.FC = () => {
   // Managerial Health Metrics (Auditoria Gerencial)
   const managerialKPIs = useMemo(() => {
     const totalLiquidity = summary.totalBalance;
-    const totalMonthPayables = summary.monthExpense + summary.expectedExpense;
+    const totalPeriodPayables = periodMetrics.expense + periodMetrics.expectedExpense;
 
-    // 1. Immediate Liquidity Ratio (Capacidade de honrar compromissos imediatos)
-    const liquidityRatio = totalMonthPayables > 0 ? Number((totalLiquidity / totalMonthPayables).toFixed(2)) : 99.9;
+    // 1. Immediate Liquidity Ratio
+    const liquidityRatio = totalPeriodPayables > 0 ? Number((totalLiquidity / totalPeriodPayables).toFixed(2)) : 99.9;
 
-    // 2. Default / Overdue Receivables Rate (% de inadimplência sobre a carteira)
-    const totalReceivables = summary.overdueReceivables + summary.todayReceivables + summary.expectedIncome;
+    // 2. Default / Overdue Receivables Rate
+    const totalReceivables = summary.overdueReceivables + summary.todayReceivables + periodMetrics.expectedIncome;
     const overdueRate = totalReceivables > 0 ? Number(((summary.overdueReceivables / totalReceivables) * 100).toFixed(1)) : 0;
 
-    // 3. Cash Runway (Meses de sobrevivência com o caixa atual)
+    // 3. Cash Runway
     const totalMonthlyExpense = Math.round((summary.monthExpense + summary.expectedExpense) * 100) / 100;
     const runwayMonths = totalMonthlyExpense > 0
       ? Number((totalLiquidity / totalMonthlyExpense).toFixed(1))
@@ -84,7 +126,7 @@ export const DashboardView: React.FC = () => {
       ? 99.9
       : 0;
 
-    // 4. Operational Margin (Margem Bruta)
+    // 4. Operational Margin
     const grossMargin = dre.grossRevenue > 0 ? Number(((dre.grossProfit / dre.grossRevenue) * 100).toFixed(1)) : 0;
 
     return {
@@ -93,33 +135,37 @@ export const DashboardView: React.FC = () => {
       runwayMonths,
       grossMargin,
     };
-  }, [summary, dre]);
+  }, [summary, dre, periodMetrics]);
 
-  // Expense distribution data for Pie Chart
-  const expenseByCategoryMap = new Map<string, { name: string; value: number; color: string }>();
-  const catMap = new Map(categories.map((c) => [c.id, c]));
+  // Expense distribution data for Pie Chart based on active dateRange
+  const { pieData, totalPieExpense } = useMemo(() => {
+    const expenseByCategoryMap = new Map<string, { name: string; value: number; color: string }>();
+    const catMap = new Map(categories.map((c) => [c.id, c]));
 
-  transactions.forEach((txn) => {
-    const effectiveDate = (txn.paymentDate || txn.dueDate || '').split('T')[0];
-    if (
-      txn.type === 'expense' &&
-      txn.status === 'paid' &&
-      effectiveDate.startsWith(currentMonthStr)
-    ) {
-      const cat = catMap.get(txn.categoryId);
-      const name = cat?.name || 'Outras';
-      const color = cat?.color || '#94a3b8';
-      const current = expenseByCategoryMap.get(txn.categoryId) || { name, value: 0, color };
-      current.value = Math.round((current.value + txn.amount) * 100) / 100;
-      expenseByCategoryMap.set(txn.categoryId, current);
-    }
-  });
+    transactions.forEach((txn) => {
+      const effectiveDate = (txn.paymentDate || txn.dueDate || '').split('T')[0];
+      if (
+        txn.type === 'expense' &&
+        txn.status === 'paid' &&
+        effectiveDate >= dateRange.start &&
+        effectiveDate <= dateRange.end
+      ) {
+        const cat = catMap.get(txn.categoryId);
+        const name = cat?.name || 'Outras';
+        const color = cat?.color || '#94a3b8';
+        const current = expenseByCategoryMap.get(txn.categoryId) || { name, value: 0, color };
+        current.value = Math.round((current.value + txn.amount) * 100) / 100;
+        expenseByCategoryMap.set(txn.categoryId, current);
+      }
+    });
 
-  const pieData = Array.from(expenseByCategoryMap.values())
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 6);
+    const data = Array.from(expenseByCategoryMap.values())
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
 
-  const totalPieExpense = pieData.reduce((acc, curr) => acc + curr.value, 0);
+    const total = data.reduce((acc, curr) => acc + curr.value, 0);
+    return { pieData: data, totalPieExpense: total };
+  }, [transactions, categories, dateRange]);
 
   // Critical next 5 pending transactions
   const upcomingTransactions = transactions
@@ -160,11 +206,11 @@ export const DashboardView: React.FC = () => {
           <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-400" />
         </div>
 
-        {/* 2. Receitas do Mês */}
+        {/* 2. Receitas Realizadas */}
         <div className="p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm relative overflow-hidden group hover:border-emerald-500/40 transition-all">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              Receitas Realizadas
+              Receitas ({dateRange.label})
             </span>
             <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
               <TrendingUp className="w-4 h-4" />
@@ -172,10 +218,10 @@ export const DashboardView: React.FC = () => {
           </div>
           <div className="mt-3">
             <h3 className="text-2xl font-extrabold font-mono tracking-tight text-emerald-600 dark:text-emerald-400">
-              {maskValue(formatCurrency(summary.monthIncome))}
+              {maskValue(formatCurrency(periodMetrics.income))}
             </h3>
             <div className="flex items-center justify-between mt-2 text-[11px] text-slate-400">
-              <span>Prev: {maskValue(formatCurrency(summary.monthIncome + summary.expectedIncome))}</span>
+              <span>Prev: {maskValue(formatCurrency(periodMetrics.totalExpectedIncome))}</span>
               <span className="text-emerald-500 font-semibold flex items-center">
                 <ArrowUpRight className="w-3.5 h-3.5" />
                 Recebido
@@ -184,11 +230,11 @@ export const DashboardView: React.FC = () => {
           </div>
         </div>
 
-        {/* 3. Despesas do Mês */}
+        {/* 3. Despesas Realizadas */}
         <div className="p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm relative overflow-hidden group hover:border-rose-500/40 transition-all">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              Despesas Realizadas
+              Despesas ({dateRange.label})
             </span>
             <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
               <TrendingDown className="w-4 h-4" />
@@ -196,10 +242,10 @@ export const DashboardView: React.FC = () => {
           </div>
           <div className="mt-3">
             <h3 className="text-2xl font-extrabold font-mono tracking-tight text-rose-600 dark:text-rose-400">
-              {maskValue(formatCurrency(summary.monthExpense))}
+              {maskValue(formatCurrency(periodMetrics.expense))}
             </h3>
             <div className="flex items-center justify-between mt-2 text-[11px] text-slate-400">
-              <span>Prev: {maskValue(formatCurrency(summary.monthExpense + summary.expectedExpense))}</span>
+              <span>Prev: {maskValue(formatCurrency(periodMetrics.totalExpectedExpense))}</span>
               <span className="text-rose-500 font-semibold flex items-center">
                 <ArrowDownRight className="w-3.5 h-3.5" />
                 Pago
@@ -212,7 +258,7 @@ export const DashboardView: React.FC = () => {
         <div className="p-5 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm relative overflow-hidden group hover:border-blue-500/40 transition-all">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              Resultado Líquido do Mês
+              Resultado ({dateRange.label})
             </span>
             <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
               <Scale className="w-4 h-4" />
@@ -221,25 +267,23 @@ export const DashboardView: React.FC = () => {
           <div className="mt-3">
             <h3
               className={`text-2xl font-extrabold font-mono tracking-tight ${
-                summary.monthNet >= 0
+                periodMetrics.net >= 0
                   ? 'text-emerald-600 dark:text-emerald-400'
                   : 'text-rose-600 dark:text-rose-400'
               }`}
             >
-              {maskValue(formatCurrency(summary.monthNet))}
+              {maskValue(formatCurrency(periodMetrics.net))}
             </h3>
             <div className="flex items-center justify-between mt-2 text-[11px]">
               <span className="text-slate-400">Margem Líquida</span>
               <span
                 className={`font-semibold px-2 py-0.5 rounded text-[10px] ${
-                  summary.monthNet >= 0
+                  periodMetrics.net >= 0
                     ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
                     : 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
                 }`}
               >
-                {summary.monthIncome > 0
-                  ? `${((summary.monthNet / summary.monthIncome) * 100).toFixed(1)}%`
-                  : '0.0%'}
+                {periodMetrics.marginPercent}%
               </span>
             </div>
           </div>
@@ -479,7 +523,7 @@ export const DashboardView: React.FC = () => {
                   Despesas por Categoria
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Distribuição no mês corrente
+                  Distribuição no período ({dateRange.label})
                 </p>
               </div>
               <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300">
