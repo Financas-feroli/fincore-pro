@@ -289,13 +289,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-xs font-semibold text-slate-400">R$</span>
                       <span className="text-3xl font-extrabold font-mono text-slate-900 dark:text-white">
-                        {PLAN_PRICING.starter.yearly}
+                        {PLAN_PRICING.starter.yearlyDisplay}
                       </span>
                       <span className="text-xs text-slate-400">/mês</span>
-                      <span className="text-xs line-through text-slate-400 ml-1">R$ {PLAN_PRICING.starter.monthly}</span>
+                      <span className="text-xs line-through text-slate-400 ml-1">R$ {PLAN_PRICING.starter.monthlyDisplay}</span>
                     </div>
                     <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block mt-0.5 whitespace-nowrap">
-                      R$ {PLAN_PRICING.starter.yearlyTotal}/ano em 1x • <strong>Economize R$ {PLAN_PRICING.starter.yearlySavings}</strong>
+                      R$ {PLAN_PRICING.starter.yearlyTotalDisplay}/ano em 1x • <strong>Economize R$ {PLAN_PRICING.starter.yearlySavingsDisplay}</strong>
                     </span>
                   </div>
                 ) : (
@@ -303,7 +303,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     <div className="flex items-baseline gap-1">
                       <span className="text-xs font-semibold text-slate-400">R$</span>
                       <span className="text-3xl font-extrabold font-mono text-slate-900 dark:text-white">
-                        {PLAN_PRICING.starter.monthly}
+                        {PLAN_PRICING.starter.monthlyDisplay}
                       </span>
                       <span className="text-xs text-slate-400">/mês</span>
                     </div>
@@ -424,13 +424,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-xs font-semibold text-slate-400">R$</span>
                       <span className="text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
-                        {PLAN_PRICING.pro.yearly}
+                        {PLAN_PRICING.pro.yearlyDisplay}
                       </span>
                       <span className="text-xs text-slate-400">/mês</span>
-                      <span className="text-xs line-through text-slate-400 ml-1">R$ {PLAN_PRICING.pro.monthly}</span>
+                      <span className="text-xs line-through text-slate-400 ml-1">R$ {PLAN_PRICING.pro.monthlyDisplay}</span>
                     </div>
                     <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block mt-0.5 whitespace-nowrap">
-                      R$ {PLAN_PRICING.pro.yearlyTotal}/ano em 1x • <strong>Economize R$ {PLAN_PRICING.pro.yearlySavings}</strong>
+                      R$ {PLAN_PRICING.pro.yearlyTotalDisplay}/ano em 1x • <strong>Economize R$ {PLAN_PRICING.pro.yearlySavingsDisplay}</strong>
                     </span>
                   </div>
                 ) : (
@@ -438,7 +438,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     <div className="flex items-baseline gap-1">
                       <span className="text-xs font-semibold text-slate-400">R$</span>
                       <span className="text-3xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
-                        {PLAN_PRICING.pro.monthly}
+                        {PLAN_PRICING.pro.monthlyDisplay}
                       </span>
                       <span className="text-xs text-slate-400">/mês</span>
                     </div>
@@ -554,13 +554,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-xs font-semibold text-slate-400">R$</span>
                       <span className="text-3xl font-extrabold font-mono text-slate-900 dark:text-white">
-                        {PLAN_PRICING.business.yearly}
+                        {PLAN_PRICING.business.yearlyDisplay}
                       </span>
                       <span className="text-xs text-slate-400">/mês</span>
-                      <span className="text-xs line-through text-slate-400 ml-1">R$ {PLAN_PRICING.business.monthly}</span>
+                      <span className="text-xs line-through text-slate-400 ml-1">R$ {PLAN_PRICING.business.monthlyDisplay}</span>
                     </div>
                     <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block mt-0.5 whitespace-nowrap">
-                      R$ {PLAN_PRICING.business.yearlyTotal.toLocaleString('pt-BR')}/ano em 1x • <strong>Economize R$ {PLAN_PRICING.business.yearlySavings}</strong>
+                      R$ {PLAN_PRICING.business.yearlyTotalDisplay}/ano em 1x • <strong>Economize R$ {PLAN_PRICING.business.yearlySavingsDisplay}</strong>
                     </span>
                   </div>
                 ) : (
@@ -568,7 +568,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     <div className="flex items-baseline gap-1">
                       <span className="text-xs font-semibold text-slate-400">R$</span>
                       <span className="text-3xl font-extrabold font-mono text-slate-900 dark:text-white">
-                        {PLAN_PRICING.business.monthly}
+                        {PLAN_PRICING.business.monthlyDisplay}
                       </span>
                       <span className="text-xs text-slate-400">/mês</span>
                     </div>

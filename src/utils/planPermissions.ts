@@ -12,9 +12,13 @@ export interface PlanFeatures {
 
 export interface PlanPricing {
   monthly: number;
+  monthlyDisplay: string;
   yearly: number;
+  yearlyDisplay: string;
   yearlyTotal: number;
+  yearlyTotalDisplay: string;
   yearlySavings: number;
+  yearlySavingsDisplay: string;
   label: string;
   subtitle: string;
 }
@@ -58,26 +62,38 @@ export const PLAN_LIMITS: Record<'starter' | 'pro' | 'business', PlanFeatures> =
 /** Centralized plan pricing — single source of truth for all UI components */
 export const PLAN_PRICING: Record<'starter' | 'pro' | 'business', PlanPricing> = {
   starter: {
-    monthly: 49,
-    yearly: 39,
-    yearlyTotal: 470,
-    yearlySavings: 118,
+    monthly: 29.9,
+    monthlyDisplay: '29,90',
+    yearly: 23.9,
+    yearlyDisplay: '23,90',
+    yearlyTotal: 287,
+    yearlyTotalDisplay: '287,00',
+    yearlySavings: 71.8,
+    yearlySavingsDisplay: '71,80',
     label: 'Starter',
     subtitle: 'Ideal para MEIs e profissionais autônomos',
   },
   pro: {
-    monthly: 97,
-    yearly: 77,
-    yearlyTotal: 930,
-    yearlySavings: 234,
+    monthly: 49.9,
+    monthlyDisplay: '49,90',
+    yearly: 39.9,
+    yearlyDisplay: '39,90',
+    yearlyTotal: 479,
+    yearlyTotalDisplay: '479,00',
+    yearlySavings: 119.8,
+    yearlySavingsDisplay: '119,80',
     label: 'Pro',
     subtitle: 'Para pequenas e médias empresas em crescimento',
   },
   business: {
-    monthly: 197,
-    yearly: 157,
-    yearlyTotal: 1890,
-    yearlySavings: 474,
+    monthly: 99.9,
+    monthlyDisplay: '99,90',
+    yearly: 79.9,
+    yearlyDisplay: '79,90',
+    yearlyTotal: 959,
+    yearlyTotalDisplay: '959,00',
+    yearlySavings: 239.8,
+    yearlySavingsDisplay: '239,80',
     label: 'Business',
     subtitle: 'Para empresas com múltiplas filiais e equipes',
   },
