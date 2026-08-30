@@ -247,6 +247,28 @@ export const ReportsView: React.FC = () => {
 
         {/* 1. DRE GERENCIAL VIEW */}
         {activeReport === 'dre' && (
+          !planFeatures.hasAdvancedDRE ? (
+            <div className="p-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 mx-auto flex items-center justify-center border border-amber-500/20">
+                <Crown className="w-6 h-6" />
+              </div>
+              <div className="max-w-md mx-auto">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                  DRE Gerencial Completo & Análise de Resultados
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  O Demonstrativo do Resultado do Exercício com estrutura contábil, margem EBITDA e apuração por competência e caixa é um recurso dos planos <strong>PRO</strong> e <strong>BUSINESS</strong>.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsPricingModalOpen(true)}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-colors inline-flex items-center gap-1.5"
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+                <span>Fazer Upgrade para o Plano Pro</span>
+              </button>
+            </div>
+          ) : (
           <div className="space-y-6">
             {/* Highlights Strip */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 text-xs font-mono">
@@ -340,6 +362,7 @@ export const ReportsView: React.FC = () => {
               </table>
             </div>
           </div>
+          )
         )}
 
         {/* 2. CASH FLOW REALIZED VS FORECAST */}
@@ -372,7 +395,7 @@ export const ReportsView: React.FC = () => {
 
               <div className="p-5 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-500/20 rounded-xl">
                 <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase">
-                  Saldo Líquido Realizado
+                  Resultado Realizado
                 </span>
                 <h3
                   className={`text-2xl font-extrabold font-mono mt-1 ${
@@ -384,29 +407,93 @@ export const ReportsView: React.FC = () => {
                   {formatCurrency(cashFlowComparison.netRealized)}
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Saldo Projetado: {formatCurrency(cashFlowComparison.netForecast)}
+                  Resultado Previsto: {formatCurrency(cashFlowComparison.netForecast)}
                 </p>
               </div>
+            </div>
+
+            {/* Cash Flow Detailed Comparison Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b-2 border-slate-300 dark:border-slate-700 bg-slate-100/80 dark:bg-slate-800/80 text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    <th className="py-2.5 px-4">Indicador de Fluxo de Caixa</th>
+                    <th className="py-2.5 px-4 text-right">Previsto / Orçado</th>
+                    <th className="py-2.5 px-4 text-right">Realizado Efetivo</th>
+                    <th className="py-2.5 px-4 text-right">Desvio / Diferença</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tr>
+                    <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">
+                      (+) Entradas de Caixa (Receitas)
+                    </td>
+                    <td className="py-3 px-4 text-right font-mono text-slate-600 dark:text-slate-400">
+                      {formatCurrency(cashFlowComparison.totalInflowForecast)}
+                    </td>
+                    <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      {formatCurrency(cashFlowComparison.realizedInflow)}
+                    </td>
+                    <td className="py-3 px-4 text-right font-mono text-slate-500">
+                      {formatCurrency(cashFlowComparison.realizedInflow - cashFlowComparison.totalInflowForecast)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">
+                      (-) Saídas de Caixa (Despesas)
+                    </td>
+                    <td className="py-3 px-4 text-right font-mono text-slate-600 dark:text-slate-400">
+                      {formatCurrency(cashFlowComparison.totalOutflowForecast)}
+                    </td>
+                    <td className="py-3 px-4 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
+                      {formatCurrency(cashFlowComparison.realizedOutflow)}
+                    </td>
+                    <td className="py-3 px-4 text-right font-mono text-slate-500">
+                      {formatCurrency(cashFlowComparison.realizedOutflow - cashFlowComparison.totalOutflowForecast)}
+                    </td>
+                  </tr>
+                  <tr className="bg-slate-50/70 dark:bg-slate-800/40 font-bold">
+                    <td className="py-3 px-4 text-slate-900 dark:text-white">
+                      (=) Saldo Operacional Líquido do Mês
+                    </td>
+                    <td className="py-3 px-4 text-right font-mono text-slate-800 dark:text-slate-200">
+                      {formatCurrency(cashFlowComparison.netForecast)}
+                    </td>
+                    <td
+                      className={`py-3 px-4 text-right font-mono font-black ${
+                        cashFlowComparison.netRealized >= 0
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-rose-600 dark:text-rose-400'
+                      }`}
+                    >
+                      {formatCurrency(cashFlowComparison.netRealized)}
+                    </td>
+                    <td className="py-3 px-4 text-right font-mono">
+                      {formatCurrency(cashFlowComparison.netRealized - cashFlowComparison.netForecast)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         )}
 
-        {/* 3. COST CENTER REPORT */}
+        {/* 3. COST CENTERS REPORT */}
         {activeReport === 'costCenters' && (
-          <div className="overflow-x-auto">
+          <div className="space-y-6">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b-2 border-slate-300 dark:border-slate-700 bg-slate-100/80 dark:bg-slate-800/80 text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                  <th className="py-2.5 px-3">Código</th>
+                  <th className="py-2.5 px-3 w-16">Código</th>
                   <th className="py-2.5 px-4">Centro de Custo</th>
                   <th className="py-2.5 px-4 text-right">Receitas (R$)</th>
                   <th className="py-2.5 px-4 text-right">Despesas (R$)</th>
                   <th className="py-2.5 px-4 text-right">Resultado Líquido</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">
-                {costCenterBreakdown.map((cc) => (
-                  <tr key={cc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
+                {costCenterReport.map((cc) => (
+                  <tr key={cc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                     <td className="py-3 px-3 text-slate-400 font-bold">{cc.code}</td>
                     <td className="py-3 px-4 font-sans font-semibold text-slate-900 dark:text-white">
                       {cc.name}
@@ -445,6 +532,11 @@ export const ReportsView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <PricingModal
+        isOpen={isPricingModalOpen}
+        onClose={() => setIsPricingModalOpen(false)}
+      />
     </div>
   );
 };

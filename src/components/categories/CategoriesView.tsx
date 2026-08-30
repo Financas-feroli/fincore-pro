@@ -336,6 +336,28 @@ export const CategoriesView: React.FC = () => {
 
       {/* CENTROS DE CUSTO TAB */}
       {activeTab === 'costCenters' && (
+        !planFeatures.hasCostCenters ? (
+          <div className="p-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 mx-auto flex items-center justify-center border border-amber-500/20">
+              <Crown className="w-6 h-6" />
+            </div>
+            <div className="max-w-md mx-auto">
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                Centros de Custo & Rateio Departamental
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                A gestão departamental por centros de custo com metas de orçamento orçado vs realizado é um recurso exclusivo dos planos <strong>PRO</strong> e <strong>BUSINESS</strong>.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsPricingModalOpen(true)}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-colors inline-flex items-center gap-1.5"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+              <span>Fazer Upgrade para o Plano Pro</span>
+            </button>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {costCenters.map((cc) => {
             const spent = costCenterSpentMap.get(cc.id) || 0;
@@ -409,6 +431,7 @@ export const CategoriesView: React.FC = () => {
             );
           })}
         </div>
+        )
       )}
 
       {/* Modal: Category */}
