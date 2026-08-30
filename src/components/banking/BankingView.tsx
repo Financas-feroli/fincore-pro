@@ -53,9 +53,9 @@ export const BankingView: React.FC = () => {
   const [accAgency, setAccAgency] = useState('');
   const [accNumber, setAccNumber] = useState('');
   const [accType, setAccType] = useState<BankAccount['type']>('checking');
-  const [accInitialBalance, setAccInitialBalance] = useState('0');
+  const [accInitialBalance, setAccInitialBalance] = useState('');
   const [accColor, setAccColor] = useState('#10B981');
-  const [accCreditLimit, setAccCreditLimit] = useState('10000');
+  const [accCreditLimit, setAccCreditLimit] = useState('');
   const [accClosingDay, setAccClosingDay] = useState(25);
   const [accDueDay, setAccDueDay] = useState(5);
 
@@ -92,9 +92,9 @@ export const BankingView: React.FC = () => {
       setAccAgency(accountToEdit.agency || '');
       setAccNumber(accountToEdit.accountNumber || '');
       setAccType(accountToEdit.type);
-      setAccInitialBalance(accountToEdit.currentBalance.toString());
+      setAccInitialBalance(accountToEdit.currentBalance === 0 ? '' : accountToEdit.currentBalance.toString());
       setAccColor(accountToEdit.color);
-      setAccCreditLimit((accountToEdit.creditLimit || 0).toString());
+      setAccCreditLimit((accountToEdit.creditLimit || 0) === 0 ? '' : (accountToEdit.creditLimit || 0).toString());
       setAccClosingDay(accountToEdit.closingDay || 25);
       setAccDueDay(accountToEdit.dueDay || 5);
     } else {
@@ -104,9 +104,9 @@ export const BankingView: React.FC = () => {
       setAccAgency('');
       setAccNumber('');
       setAccType('checking');
-      setAccInitialBalance('0');
+      setAccInitialBalance('');
       setAccColor('#10B981');
-      setAccCreditLimit('10000');
+      setAccCreditLimit('');
       setAccClosingDay(25);
       setAccDueDay(5);
     }
