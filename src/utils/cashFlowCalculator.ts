@@ -85,16 +85,16 @@ export function calculateCashFlowAndSummary(
 
   // 3. Generate 30-Day Daily Cash Flow (14 days past, today, 15 days future)
   const cashFlow30Days: CashFlowPoint[] = [];
-  const baseDate = new Date();
-  baseDate.setDate(baseDate.getDate() - 14); // start 14 days ago
-
-  const dailyMap = new Map<string, { income: number; expense: number }>();
+  const now = new Date();
   const dateList: string[] = [];
+  const dailyMap = new Map<string, { income: number; expense: number }>();
 
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(baseDate);
-    d.setDate(baseDate.getDate() + i);
-    const dateStr = d.toISOString().split('T')[0];
+  for (let i = -14; i <= 15; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
     dailyMap.set(dateStr, { income: 0, expense: 0 });
     dateList.push(dateStr);
   }
