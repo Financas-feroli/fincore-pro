@@ -45,6 +45,7 @@ export const QuickTransactionModal: React.FC = () => {
   const [costCenterId, setCostCenterId] = useState('');
   const [dueDate, setDueDate] = useState(getTodayDateString());
   const [paymentDate, setPaymentDate] = useState(getTodayDateString());
+  const [isPaymentDateManuallySet, setIsPaymentDateManuallySet] = useState(false);
   const [competenceDate, setCompetenceDate] = useState(getTodayDateString().substring(0, 7) + '-01');
   const [status, setStatus] = useState<TransactionStatus>('paid');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix');
@@ -83,6 +84,7 @@ export const QuickTransactionModal: React.FC = () => {
         setCostCenterId(editingTransaction.costCenterId || '');
         setDueDate(editingTransaction.dueDate || getTodayDateString());
         setPaymentDate(editingTransaction.paymentDate || editingTransaction.dueDate || getTodayDateString());
+        setIsPaymentDateManuallySet(!!editingTransaction.paymentDate);
         setCompetenceDate(editingTransaction.competenceDate || getTodayDateString().substring(0, 7) + '-01');
         setStatus(editingTransaction.status || 'paid');
         setPaymentMethod(editingTransaction.paymentMethod || 'pix');
@@ -104,9 +106,11 @@ export const QuickTransactionModal: React.FC = () => {
         const filteredCats = categories.filter((c) => c.type === (quickEntryType === 'income' ? 'income' : 'expense'));
         setCategoryId(filteredCats[0]?.id || '');
         setCostCenterId(costCenters[0]?.id || '');
-        setDueDate(getTodayDateString());
-        setPaymentDate(getTodayDateString());
-        setCompetenceDate(getTodayDateString().substring(0, 7) + '-01');
+        const todayStr = getTodayDateString();
+        setDueDate(todayStr);
+        setPaymentDate(todayStr);
+        setIsPaymentDateManuallySet(false);
+        setCompetenceDate(todayStr.substring(0, 7) + '-01');
         setStatus('paid');
         setAmount('');
         setDescription('');
@@ -450,6 +454,50 @@ export const QuickTransactionModal: React.FC = () => {
               </select>
             </div>
 
+            {/* Status */}
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold tracking-wider text-slate-400 dark:text-slate-400 uppercase">
+                Situação do Lançamento
+              </label>
+              <select
+                value={status}
+                onChange={(e) => {
+                  const newStatus = e.target.value as TransactionStatus;
+                  setStatus(newStatus);
+                  if (newStatus === 'paid' && !paymentDate) {
+                    setPaymentDate(dueDate || getTodayDateString());
+                  }
+                }}
+                className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl focus:outline-none focus:border-emerald-500"
+              >
+                <option value="paid">{type === 'income' ? 'Recebido Já (Liquidado)' : 'Pago Já (Liquidado)'}</option>
+                <option value="pending">Pendente (A Pagar / Receber)</option>
+                <option value="scheduled">Agendado</option>
+              </select>
+            </div>
+
+            {/* Payment Method (if paid) */}
+            {status === 'paid' ? (
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold tracking-wider text-slate-400 dark:text-slate-400 uppercase">
+                  Forma de Pagamento
+                </label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                  className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="pix">PIX</option>
+                  <option value="boleto">Boleto Bancário</option>
+                  <option value="credit_card">Cartão de Crédito</option>
+                  <option value="debit_card">Cartão de Débito</option>
+                  <option value="transfer">Transferência / TED / DOC</option>
+                  <option value="cash">Dinheiro em Espécie</option>
+                  <option value="other">Outro</option>
+                </select>
+              </div>
+            ) : null}
+
             {/* Due Date */}
             <div className="space-y-1.5">
               <label className="block text-[11px] font-semibold tracking-wider text-slate-400 dark:text-slate-400 uppercase">
@@ -458,26 +506,35 @@ export const QuickTransactionModal: React.FC = () => {
               <input
                 type="date"
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+                onChange={(e) => {
+                  const newDue = e.target.value;
+                  setDueDate(newDue);
+                  if (!isPaymentDateManuallySet) {
+                    setPaymentDate(newDue);
+                  }
+                }}
                 className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl focus:outline-none focus:border-emerald-500 font-mono"
               />
             </div>
 
-            {/* Status */}
-            <div className="space-y-1.5">
-              <label className="block text-[11px] font-semibold tracking-wider text-slate-400 dark:text-slate-400 uppercase">
-                Situação do Lançamento
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as TransactionStatus)}
-                className="w-full px-3.5 py-2.5 text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-100/70 dark:bg-[#161f30] border border-slate-200 dark:border-slate-700/70 rounded-xl focus:outline-none focus:border-emerald-500"
-              >
-                <option value="paid">{type === 'income' ? 'Recebido Já (Liquidado)' : 'Pago Já (Liquidado)'}</option>
-                <option value="pending">Pendente (A Pagar / Receber)</option>
-                <option value="scheduled">Agendado</option>
-              </select>
-            </div>
+            {/* Payment Date - Visible when status === 'paid' */}
+            {status === 'paid' && (
+              <div className="space-y-1.5 animate-fade-in">
+                <label className="block text-[11px] font-semibold tracking-wider text-emerald-600 dark:text-emerald-400 uppercase flex items-center justify-between">
+                  <span>{type === 'income' ? 'Data do Recebimento Real' : 'Data do Pagamento Real'}</span>
+                  <span className="text-[10px] font-normal text-slate-400 lowercase">(personalizável)</span>
+                </label>
+                <input
+                  type="date"
+                  value={paymentDate}
+                  onChange={(e) => {
+                    setPaymentDate(e.target.value);
+                    setIsPaymentDateManuallySet(true);
+                  }}
+                  className="w-full px-3.5 py-2.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-300 dark:border-emerald-700/70 rounded-xl focus:outline-none focus:border-emerald-500 font-mono"
+                />
+              </div>
+            )}
           </div>
         )}
 
