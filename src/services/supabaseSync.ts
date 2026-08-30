@@ -49,6 +49,36 @@ const retryAsync = async <T>(
 };
 
 // -------------------------------------------------------------------
+// AUDIT LOG HELPER
+// -------------------------------------------------------------------
+export const recordAuditLog = async (
+  organizationId: string,
+  action: 'INSERT' | 'UPDATE' | 'DELETE' | 'SETTLE' | 'SUBSCRIPTION_CHANGE',
+  entityType: 'transaction' | 'account' | 'category' | 'contact' | 'organization',
+  entityId?: string,
+  oldValues?: Record<string, unknown>,
+  newValues?: Record<string, unknown>
+): Promise<void> => {
+  if (!isCloudSyncEnabled() || !organizationId) return;
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from('audit_logs').insert({
+      organization_id: organizationId,
+      user_id: user?.id || null,
+      action,
+      entity_type: entityType,
+      entity_id: entityId || null,
+      old_values: oldValues || null,
+      new_values: newValues || null,
+    });
+  } catch (err) {
+    // Non-blocking: audit failure should never break UI transactions
+    console.warn('[PROSPER AuditLog] Failed to log action:', err);
+  }
+};
+
+// -------------------------------------------------------------------
 // TRANSACTIONS
 // -------------------------------------------------------------------
 export const syncTransactionsToSupabase = async (
@@ -82,8 +112,8 @@ export const syncTransactionsToSupabase = async (
           due_date: txn.dueDate,
           payment_date: txn.paymentDate || null,
           status: txn.status,
-          category_id: txn.categoryId,
-          account_id: txn.accountId,
+          category_id: txn.categoryId || null,
+          account_id: txn.accountId || null,
           target_account_id: txn.targetAccountId || null,
           contact_id: txn.contactId || null,
           cost_center_id: txn.costCenterId || null,
@@ -98,6 +128,7 @@ export const syncTransactionsToSupabase = async (
           discount_amount: txn.discountAmount || 0,
           created_at: txn.createdAt,
           updated_at: txn.updatedAt,
+          deleted_at: null,
           data_json: JSON.stringify(txn), // Full JSON backup for safety
         };
       });
@@ -123,6 +154,7 @@ export const loadTransactionsFromSupabase = async (
       .from('transactions')
       .select('data_json')
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -161,6 +193,7 @@ export const syncAccountsToSupabase = async (
         current_balance: acc.currentBalance,
         color: acc.color,
         is_default: acc.isDefault ?? false,
+        deleted_at: null,
         data_json: JSON.stringify(acc),
       }));
 
@@ -184,7 +217,8 @@ export const loadAccountsFromSupabase = async (
     const { data, error } = await supabase
       .from('accounts_data')
       .select('data_json')
-      .eq('organization_id', organizationId);
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
 
     if (error) throw error;
     if (!data || data.length === 0) return null;
@@ -219,6 +253,7 @@ export const syncCategoriesToSupabase = async (
         type: cat.type,
         group_name: cat.group,
         color: cat.color,
+        deleted_at: null,
         data_json: JSON.stringify(cat),
       }));
 
@@ -242,7 +277,8 @@ export const loadCategoriesFromSupabase = async (
     const { data, error } = await supabase
       .from('categories_data')
       .select('data_json')
-      .eq('organization_id', organizationId);
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
 
     if (error) throw error;
     if (!data || data.length === 0) return null;
@@ -274,6 +310,7 @@ export const syncCostCentersToSupabase = async (
         id: cc.id,
         organization_id: organizationId,
         name: cc.name,
+        deleted_at: null,
         data_json: JSON.stringify(cc),
       }));
 
@@ -297,7 +334,8 @@ export const loadCostCentersFromSupabase = async (
     const { data, error } = await supabase
       .from('cost_centers_data')
       .select('data_json')
-      .eq('organization_id', organizationId);
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
 
     if (error) throw error;
     if (!data || data.length === 0) return null;
@@ -330,6 +368,7 @@ export const syncContactsToSupabase = async (
         organization_id: organizationId,
         name: c.name,
         type: c.type,
+        deleted_at: null,
         data_json: JSON.stringify(c),
       }));
 
@@ -353,7 +392,8 @@ export const loadContactsFromSupabase = async (
     const { data, error } = await supabase
       .from('contacts_data')
       .select('data_json')
-      .eq('organization_id', organizationId);
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
 
     if (error) throw error;
     if (!data || data.length === 0) return null;
@@ -475,7 +515,7 @@ export const loadAllFromSupabase = async (
 };
 
 // -------------------------------------------------------------------
-// DELETE helpers (for sync of deletions)
+// DELETE helpers (Soft Delete with deleted_at timestamp)
 // -------------------------------------------------------------------
 export const deleteTransactionFromSupabase = async (
   transactionId: string
@@ -485,11 +525,13 @@ export const deleteTransactionFromSupabase = async (
   try {
     const { error } = await supabase
       .from('transactions')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', transactionId);
 
-    if (error)
-      console.error('[PROSPER CloudSync] Delete transaction failed:', error);
+    if (error) {
+      // Fallback to hard delete if soft delete column isn't present
+      await supabase.from('transactions').delete().eq('id', transactionId);
+    }
   } catch (err) {
     console.error('[PROSPER CloudSync] Delete transaction error:', err);
   }
@@ -498,15 +540,18 @@ export const deleteTransactionFromSupabase = async (
 export const deleteMultipleTransactionsFromSupabase = async (
   transactionIds: string[]
 ): Promise<void> => {
-  if (!isCloudSyncEnabled()) return;
+  if (!isCloudSyncEnabled() || transactionIds.length === 0) return;
 
   try {
     const { error } = await supabase
       .from('transactions')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .in('id', transactionIds);
 
-    if (error) console.error('[PROSPER CloudSync] Batch delete failed:', error);
+    if (error) {
+      // Fallback to hard delete
+      await supabase.from('transactions').delete().in('id', transactionIds);
+    }
   } catch (err) {
     console.error('[PROSPER CloudSync] Batch delete error:', err);
   }
@@ -519,10 +564,12 @@ export const deleteAccountFromSupabase = async (
   try {
     const { error } = await supabase
       .from('accounts_data')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', accountId);
-    if (error)
-      console.error('[PROSPER CloudSync] Delete account failed:', error);
+
+    if (error) {
+      await supabase.from('accounts_data').delete().eq('id', accountId);
+    }
   } catch (err) {
     console.error('[PROSPER CloudSync] Delete account error:', err);
   }
@@ -535,10 +582,12 @@ export const deleteCategoryFromSupabase = async (
   try {
     const { error } = await supabase
       .from('categories_data')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', categoryId);
-    if (error)
-      console.error('[PROSPER CloudSync] Delete category failed:', error);
+
+    if (error) {
+      await supabase.from('categories_data').delete().eq('id', categoryId);
+    }
   } catch (err) {
     console.error('[PROSPER CloudSync] Delete category error:', err);
   }
@@ -551,10 +600,12 @@ export const deleteCostCenterFromSupabase = async (
   try {
     const { error } = await supabase
       .from('cost_centers_data')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', costCenterId);
-    if (error)
-      console.error('[PROSPER CloudSync] Delete cost center failed:', error);
+
+    if (error) {
+      await supabase.from('cost_centers_data').delete().eq('id', costCenterId);
+    }
   } catch (err) {
     console.error('[PROSPER CloudSync] Delete cost center error:', err);
   }
@@ -567,10 +618,12 @@ export const deleteContactFromSupabase = async (
   try {
     const { error } = await supabase
       .from('contacts_data')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', contactId);
-    if (error)
-      console.error('[PROSPER CloudSync] Delete contact failed:', error);
+
+    if (error) {
+      await supabase.from('contacts_data').delete().eq('id', contactId);
+    }
   } catch (err) {
     console.error('[PROSPER CloudSync] Delete contact error:', err);
   }
