@@ -228,21 +228,19 @@ export const storageService = {
       console.warn('Error reading stripe links:', e);
     }
 
-    // ⚠️ STRIPE TEST MODE — Replace with production Price Links from your Stripe Dashboard
+    // Official Stripe Payment Links generated for PROSPER SaaS
     if (cycle === 'yearly') {
       return {
-        // TODO: Replace with yearly Stripe Payment Links from dashboard.stripe.com
-        starter: 'https://buy.stripe.com/test_YEARLY_STARTER_PLACEHOLDER',
-        pro: 'https://buy.stripe.com/test_YEARLY_PRO_PLACEHOLDER',
-        business: 'https://buy.stripe.com/test_YEARLY_BUSINESS_PLACEHOLDER',
+        starter: 'https://buy.stripe.com/test_5kQ00ieR10PC8y73wydMI04',
+        pro: 'https://buy.stripe.com/test_eVqfZg10baqccOnebcdMI06',
+        business: 'https://buy.stripe.com/test_6oU6oG7oz9m8g0z3wydMI08',
       };
     }
 
     return {
-      // TODO: Replace with monthly Stripe Payment Links from dashboard.stripe.com
-      starter: 'https://buy.stripe.com/test_28EeVc5greGsaGf3wydMI00',
-      pro: 'https://buy.stripe.com/test_bJefZg24ffKw8y7ffgdMI01',
-      business: 'https://buy.stripe.com/test_cNicN4eR1eGs6pZ3wydMI02',
+      starter: 'https://buy.stripe.com/test_7sYbJ0bEP2XK01B9UWdMI03',
+      pro: 'https://buy.stripe.com/test_9B64gy6kvbugg0z5EGdMI05',
+      business: 'https://buy.stripe.com/test_aFa9AS5grdCo9CbffgdMI07',
     };
   },
 
