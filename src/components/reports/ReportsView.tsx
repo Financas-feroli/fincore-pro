@@ -12,7 +12,7 @@ import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
 import { getPlanFeatures } from '../../utils/planPermissions';
 import { PricingModal } from '../common/PricingModal';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, getTodayDateString } from '../../utils/formatters';
 import { calculateDRE } from '../../utils/dreCalculator';
 
 export const ReportsView: React.FC = () => {
@@ -23,7 +23,7 @@ export const ReportsView: React.FC = () => {
   const planFeatures = getPlanFeatures(organization?.plan || 'pro', isTrial, organization?.trialEndsAt);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [activeReport, setActiveReport] = useState<'dre' | 'cashFlow' | 'costCenters'>('dre');
-  const [selectedMonth, setSelectedMonth] = useState('2026-08');
+  const [selectedMonth, setSelectedMonth] = useState(() => getTodayDateString().substring(0, 7));
   const [regime, setRegime] = useState<'competence' | 'cash'>('competence');
 
   // Auto scroll to top on report tab change

@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import { Calendar as CalendarIcon, ChevronDown, Check } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
+import { getTodayDateString } from '../../utils/formatters';
+
+const formatLocal = (d: Date): string => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
 
 export const DateRangeSelector: React.FC = () => {
   const { dateRange, setDateRange } = useFinance();
@@ -10,19 +18,18 @@ export const DateRangeSelector: React.FC = () => {
     {
       label: 'Hoje',
       getRange: () => {
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTodayDateString();
         return { start: today, end: today, label: 'Hoje' };
       },
     },
     {
       label: 'Últimos 7 dias',
       getRange: () => {
-        const end = new Date();
-        const start = new Date();
-        start.setDate(end.getDate() - 6);
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
         return {
-          start: start.toISOString().split('T')[0],
-          end: end.toISOString().split('T')[0],
+          start: formatLocal(start),
+          end: formatLocal(now),
           label: 'Últimos 7 dias',
         };
       },
@@ -30,10 +37,10 @@ export const DateRangeSelector: React.FC = () => {
     {
       label: 'Este Mês',
       getRange: () => {
-        const today = new Date();
-        const y = today.getFullYear();
-        const m = String(today.getMonth() + 1).padStart(2, '0');
-        const lastDay = new Date(y, today.getMonth() + 1, 0).getDate();
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
         return {
           start: `${y}-${m}-01`,
           end: `${y}-${m}-${String(lastDay).padStart(2, '0')}`,
@@ -44,8 +51,8 @@ export const DateRangeSelector: React.FC = () => {
     {
       label: 'Mês Passado',
       getRange: () => {
-        const today = new Date();
-        const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const now = new Date();
+        const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const y = prevMonth.getFullYear();
         const m = String(prevMonth.getMonth() + 1).padStart(2, '0');
         const lastDay = new Date(y, prevMonth.getMonth() + 1, 0).getDate();
@@ -59,18 +66,17 @@ export const DateRangeSelector: React.FC = () => {
     {
       label: 'Próximos 30 dias',
       getRange: () => {
-        const start = new Date();
-        const end = new Date();
-        end.setDate(start.getDate() + 30);
+        const now = new Date();
+        const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 30);
         return {
-          start: start.toISOString().split('T')[0],
-          end: end.toISOString().split('T')[0],
+          start: formatLocal(now),
+          end: formatLocal(end),
           label: 'Próximos 30 dias',
         };
       },
     },
     {
-      label: 'Ano Atual (2026)',
+      label: 'Ano Atual',
       getRange: () => {
         const y = new Date().getFullYear();
         return {
@@ -84,8 +90,8 @@ export const DateRangeSelector: React.FC = () => {
       label: 'Tudo (Sem filtro)',
       getRange: () => {
         return {
-          start: '2020-01-01',
-          end: '2030-12-31',
+          start: '2000-01-01',
+          end: '2099-12-31',
           label: 'Todo o Período',
         };
       },
