@@ -235,43 +235,96 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (memberData && memberData.organizations) {
-        const org = memberData.organizations;
-        const orgObj: Organization = {
-          id: org.id,
-          name: org.name || currentUser.user_metadata?.company_name || 'Minha Empresa',
-          tradeName: org.trade_name || currentUser.user_metadata?.company_name || 'Minha Empresa',
-          document: org.document || currentUser.user_metadata?.document,
-          // Supabase is source of truth for plan; localStorage is fallback only
-          plan: org.plan || localOrg?.plan || 'pro',
-          subscriptionStatus: org.subscription_status || localOrg?.subscriptionStatus || 'trialing',
-          // Load trialEndsAt from Supabase first, then localStorage fallback
-          trialEndsAt: org.trial_ends_at || localOrg?.trialEndsAt,
-          createdAt: org.created_at,
-        };
+        const rawOrg = memberData.organizations;
+        const org = Array.isArray(rawOrg) ? rawOrg[0] : rawOrg;
+        if (org) {
+          const orgObj: Organization = {
+            id: org.id,
+            name: org.name || currentUser.user_metadata?.company_name || 'Minha Empresa',
+            tradeName: org.trade_name || currentUser.user_metadata?.company_name || 'Minha Empresa',
+            document: org.document || currentUser.user_metadata?.document,
+            // Supabase is source of truth for plan; localStorage is fallback only
+            plan: org.plan || localOrg?.plan || 'pro',
+            subscriptionStatus: org.subscription_status || localOrg?.subscriptionStatus || 'trialing',
+            // Load trialEndsAt from Supabase first, then localStorage fallback
+            trialEndsAt: org.trial_ends_at || localOrg?.trialEndsAt,
+            createdAt: org.created_at,
+          };
 
-        setOrganization(orgObj);
-        localStorage.setItem(key, JSON.stringify(orgObj));
-        setProfile({
-          id: currentUser.id,
-          email: currentUser.email || '',
-          fullName: currentUser.user_metadata?.full_name || 'Gestor',
-          role: memberData.role || 'admin',
-          organizationId: org.id,
-          organization: orgObj,
-        });
-      } else {
-        // Fallback user-scoped organization
-        const userOrg = localOrg || getStoredOrganization(currentUser.id, null, false);
-        setOrganization(userOrg);
-        setProfile({
-          id: currentUser.id,
-          email: currentUser.email || '',
-          fullName: currentUser.user_metadata?.full_name || 'Gestor',
-          role: 'admin',
-          organizationId: userOrg.id,
-          organization: userOrg,
-        });
+          setOrganization(orgObj);
+          localStorage.setItem(key, JSON.stringify(orgObj));
+          setProfile({
+            id: currentUser.id,
+            email: currentUser.email || '',
+            fullName: currentUser.user_metadata?.full_name || 'Gestor',
+            role: memberData.role || 'admin',
+            organizationId: org.id,
+            organization: orgObj,
+          });
+          return;
+        }
       }
+
+      // Self-healing: If user is authenticated in Supabase but missing organization_members record, create it
+      if (currentUser.id) {
+        const companyName = currentUser.user_metadata?.company_name || 'Minha Empresa';
+        const document = currentUser.user_metadata?.document || '';
+
+        const { data: newOrg } = await supabase
+          .from('organizations')
+          .insert({
+            name: companyName,
+            trade_name: companyName,
+            document: document,
+            plan: 'pro',
+            subscription_status: 'trialing',
+          })
+          .select()
+          .single();
+
+        if (newOrg) {
+          await supabase.from('organization_members').insert({
+            organization_id: newOrg.id,
+            user_id: currentUser.id,
+            role: 'admin',
+          });
+
+          const orgObj: Organization = {
+            id: newOrg.id,
+            name: newOrg.name,
+            tradeName: newOrg.trade_name || newOrg.name,
+            document: newOrg.document,
+            plan: 'pro',
+            subscriptionStatus: 'trialing',
+            trialEndsAt: newOrg.trial_ends_at,
+            createdAt: newOrg.created_at,
+          };
+
+          setOrganization(orgObj);
+          localStorage.setItem(key, JSON.stringify(orgObj));
+          setProfile({
+            id: currentUser.id,
+            email: currentUser.email || '',
+            fullName: currentUser.user_metadata?.full_name || 'Gestor',
+            role: 'admin',
+            organizationId: newOrg.id,
+            organization: orgObj,
+          });
+          return;
+        }
+      }
+
+      // Fallback user-scoped organization
+      const userOrg = localOrg || getStoredOrganization(currentUser.id, null, false);
+      setOrganization(userOrg);
+      setProfile({
+        id: currentUser.id,
+        email: currentUser.email || '',
+        fullName: currentUser.user_metadata?.full_name || 'Gestor',
+        role: 'admin',
+        organizationId: userOrg.id,
+        organization: userOrg,
+      });
     } catch (err) {
       console.warn('Error loading user organization:', err);
       const userOrg = getStoredOrganization(currentUser.id, null, false);
