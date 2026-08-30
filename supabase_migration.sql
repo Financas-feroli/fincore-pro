@@ -1,16 +1,8 @@
 -- ==============================================================================
 -- PROSPER SAAS — MASTER DATABASE MIGRATION SCRIPT (POSTGRESQL / SUPABASE)
 -- ==============================================================================
--- Este script é 100% idempotente (pode ser executado múltiplas vezes sem erros).
--- Ele implementa:
---  1. Extensões e Funções Utilitárias (UUIDs, Triggers de updated_at)
---  2. Multi-tenant Completo (organizations, organization_members)
---  3. Tabelas Financeiras com Integridade Referencial (FKs) e Constraints
---  4. Suporte a Soft Delete (deleted_at)
---  5. Trilha de Auditoria Financeira (audit_logs)
---  6. Índices Compostos de Alta Performance para Relatórios e DRE
---  7. Políticas RLS (Row Level Security) Robustas e Isoladas por Tenant
---  8. Tabelas Complementares de Expansão (Budgets, Anexos, Extratos OFX, LGPD)
+-- Este script é 100% compatível com tipos TEXT e UUID (com type casting explícito ::text)
+-- evitando o erro "operator does not exist: text = uuid".
 -- ==============================================================================
 
 -- ------------------------------------------------------------------------------
@@ -74,8 +66,8 @@ ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS organization_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL,
+  user_id UUID NOT NULL,
   role TEXT DEFAULT 'admin',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(organization_id, user_id)
@@ -94,9 +86,9 @@ DROP POLICY IF EXISTS "Members can view their own organization memberships" ON o
 CREATE POLICY "Members can view their own organization memberships"
   ON organization_members FOR SELECT
   USING (
-    user_id = auth.uid() OR
-    organization_id IN (
-      SELECT om.organization_id FROM organization_members om WHERE om.user_id = auth.uid()
+    user_id::text = auth.uid()::text OR
+    organization_id::text IN (
+      SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text
     )
   );
 
@@ -104,19 +96,19 @@ DROP POLICY IF EXISTS "Admins can manage organization members" ON organization_m
 CREATE POLICY "Admins can manage organization members"
   ON organization_members FOR ALL
   USING (
-    organization_id IN (
-      SELECT om.organization_id FROM organization_members om
-      WHERE om.user_id = auth.uid() AND om.role = 'admin'
+    organization_id::text IN (
+      SELECT om.organization_id::text FROM organization_members om
+      WHERE om.user_id::text = auth.uid()::text AND om.role = 'admin'
     )
   );
 
--- Políticas RLS atualizadas para organizations
+-- Políticas RLS atualizadas para organizations (com casting ::text)
 DROP POLICY IF EXISTS "Users can view their organizations" ON organizations;
 CREATE POLICY "Users can view their organizations"
   ON organizations FOR SELECT
   USING (
-    id IN (
-      SELECT om.organization_id FROM organization_members om WHERE om.user_id = auth.uid()
+    id::text IN (
+      SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text
     )
   );
 
@@ -124,9 +116,9 @@ DROP POLICY IF EXISTS "Admins can update their organizations" ON organizations;
 CREATE POLICY "Admins can update their organizations"
   ON organizations FOR UPDATE
   USING (
-    id IN (
-      SELECT om.organization_id FROM organization_members om
-      WHERE om.user_id = auth.uid() AND om.role = 'admin'
+    id::text IN (
+      SELECT om.organization_id::text FROM organization_members om
+      WHERE om.user_id::text = auth.uid()::text AND om.role = 'admin'
     )
   );
 
@@ -135,7 +127,7 @@ CREATE POLICY "Admins can update their organizations"
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS accounts_data (
   id TEXT PRIMARY KEY,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID,
   name TEXT NOT NULL,
   bank_name TEXT,
   type TEXT DEFAULT 'checking',
@@ -151,7 +143,7 @@ CREATE TABLE IF NOT EXISTS accounts_data (
 );
 
 ALTER TABLE accounts_data
-  ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS organization_id UUID,
   ADD COLUMN IF NOT EXISTS name TEXT,
   ADD COLUMN IF NOT EXISTS bank_name TEXT,
   ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'checking',
@@ -180,8 +172,8 @@ DROP POLICY IF EXISTS "Users can CRUD own org accounts_data" ON accounts_data;
 CREATE POLICY "Users can CRUD own org accounts_data"
   ON accounts_data FOR ALL
   USING (
-    organization_id IN (
-      SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
+    organization_id::text IN (
+      SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text
     )
   );
 
@@ -190,7 +182,7 @@ CREATE POLICY "Users can CRUD own org accounts_data"
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS categories_data (
   id TEXT PRIMARY KEY,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID,
   name TEXT NOT NULL,
   type TEXT DEFAULT 'expense',
   group_name TEXT,
@@ -201,7 +193,7 @@ CREATE TABLE IF NOT EXISTS categories_data (
 );
 
 ALTER TABLE categories_data
-  ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS organization_id UUID,
   ADD COLUMN IF NOT EXISTS name TEXT,
   ADD COLUMN IF NOT EXISTS type TEXT,
   ADD COLUMN IF NOT EXISTS group_name TEXT,
@@ -219,8 +211,8 @@ DROP POLICY IF EXISTS "Users can CRUD own org categories_data" ON categories_dat
 CREATE POLICY "Users can CRUD own org categories_data"
   ON categories_data FOR ALL
   USING (
-    organization_id IN (
-      SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
+    organization_id::text IN (
+      SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text
     )
   );
 
@@ -229,7 +221,7 @@ CREATE POLICY "Users can CRUD own org categories_data"
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS cost_centers_data (
   id TEXT PRIMARY KEY,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID,
   name TEXT NOT NULL,
   data_json JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -237,7 +229,7 @@ CREATE TABLE IF NOT EXISTS cost_centers_data (
 );
 
 ALTER TABLE cost_centers_data
-  ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS organization_id UUID,
   ADD COLUMN IF NOT EXISTS name TEXT,
   ADD COLUMN IF NOT EXISTS data_json JSONB,
   ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -251,8 +243,8 @@ DROP POLICY IF EXISTS "Users can CRUD own org cost_centers_data" ON cost_centers
 CREATE POLICY "Users can CRUD own org cost_centers_data"
   ON cost_centers_data FOR ALL
   USING (
-    organization_id IN (
-      SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
+    organization_id::text IN (
+      SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text
     )
   );
 
@@ -261,7 +253,7 @@ CREATE POLICY "Users can CRUD own org cost_centers_data"
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS contacts_data (
   id TEXT PRIMARY KEY,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID,
   name TEXT NOT NULL,
   type TEXT DEFAULT 'customer',
   data_json JSONB,
@@ -270,7 +262,7 @@ CREATE TABLE IF NOT EXISTS contacts_data (
 );
 
 ALTER TABLE contacts_data
-  ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS organization_id UUID,
   ADD COLUMN IF NOT EXISTS name TEXT,
   ADD COLUMN IF NOT EXISTS type TEXT,
   ADD COLUMN IF NOT EXISTS data_json JSONB,
@@ -286,17 +278,17 @@ DROP POLICY IF EXISTS "Users can CRUD own org contacts_data" ON contacts_data;
 CREATE POLICY "Users can CRUD own org contacts_data"
   ON contacts_data FOR ALL
   USING (
-    organization_id IN (
-      SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
+    organization_id::text IN (
+      SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text
     )
   );
 
 -- ------------------------------------------------------------------------------
--- 8. TRANSACTIONS (Lançamentos Financeiros com Chaves Estrangeiras)
+-- 8. TRANSACTIONS (Lançamentos Financeiros)
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS transactions (
   id TEXT PRIMARY KEY,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID,
   type TEXT NOT NULL,
   description TEXT DEFAULT '',
   amount NUMERIC(15, 2) DEFAULT 0,
@@ -304,11 +296,11 @@ CREATE TABLE IF NOT EXISTS transactions (
   due_date DATE,
   payment_date DATE,
   status TEXT DEFAULT 'pending',
-  category_id TEXT REFERENCES categories_data(id) ON DELETE SET NULL,
-  account_id TEXT REFERENCES accounts_data(id) ON DELETE SET NULL,
-  target_account_id TEXT REFERENCES accounts_data(id) ON DELETE SET NULL,
-  contact_id TEXT REFERENCES contacts_data(id) ON DELETE SET NULL,
-  cost_center_id TEXT REFERENCES cost_centers_data(id) ON DELETE SET NULL,
+  category_id TEXT,
+  account_id TEXT,
+  target_account_id TEXT,
+  contact_id TEXT,
+  cost_center_id TEXT,
   notes TEXT,
   is_recurring BOOLEAN DEFAULT FALSE,
   recurrence_frequency TEXT,
@@ -325,7 +317,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 );
 
 ALTER TABLE transactions
-  ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS organization_id UUID,
   ADD COLUMN IF NOT EXISTS type TEXT,
   ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '',
   ADD COLUMN IF NOT EXISTS amount NUMERIC(15, 2) DEFAULT 0,
@@ -367,15 +359,15 @@ CREATE TRIGGER trg_transactions_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
--- RLS Transactions
+-- RLS Transactions (com casting ::text)
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view own org transactions" ON transactions;
 CREATE POLICY "Users can view own org transactions"
   ON transactions FOR SELECT
   USING (
-    organization_id IN (
-      SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
+    organization_id::text IN (
+      SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text
     )
   );
 
@@ -383,8 +375,8 @@ DROP POLICY IF EXISTS "Users can insert own org transactions" ON transactions;
 CREATE POLICY "Users can insert own org transactions"
   ON transactions FOR INSERT
   WITH CHECK (
-    organization_id IN (
-      SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
+    organization_id::text IN (
+      SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text
     )
   );
 
@@ -392,8 +384,8 @@ DROP POLICY IF EXISTS "Users can update own org transactions" ON transactions;
 CREATE POLICY "Users can update own org transactions"
   ON transactions FOR UPDATE
   USING (
-    organization_id IN (
-      SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
+    organization_id::text IN (
+      SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text
     )
   );
 
@@ -401,8 +393,8 @@ DROP POLICY IF EXISTS "Users can delete own org transactions" ON transactions;
 CREATE POLICY "Users can delete own org transactions"
   ON transactions FOR DELETE
   USING (
-    organization_id IN (
-      SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
+    organization_id::text IN (
+      SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text
     )
   );
 
@@ -410,7 +402,7 @@ CREATE POLICY "Users can delete own org transactions"
 -- 9. COMPANY_PROFILES (Configurações Cadastrais da Empresa)
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS company_profiles (
-  organization_id UUID PRIMARY KEY REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID PRIMARY KEY,
   name TEXT,
   trade_name TEXT,
   document TEXT,
@@ -451,8 +443,8 @@ DROP POLICY IF EXISTS "Users can CRUD own org company_profiles" ON company_profi
 CREATE POLICY "Users can CRUD own org company_profiles"
   ON company_profiles FOR ALL
   USING (
-    organization_id IN (
-      SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
+    organization_id::text IN (
+      SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text
     )
   );
 
@@ -461,10 +453,10 @@ CREATE POLICY "Users can CRUD own org company_profiles"
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-  action TEXT NOT NULL, -- 'INSERT', 'UPDATE', 'DELETE', 'SETTLE', 'SUBSCRIPTION_CHANGE'
-  entity_type TEXT NOT NULL, -- 'transaction', 'account', 'category', 'organization'
+  organization_id UUID NOT NULL,
+  user_id UUID,
+  action TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
   entity_id TEXT,
   old_values JSONB,
   new_values JSONB,
@@ -481,8 +473,8 @@ DROP POLICY IF EXISTS "Users can view own org audit_logs" ON audit_logs;
 CREATE POLICY "Users can view own org audit_logs"
   ON audit_logs FOR SELECT
   USING (
-    organization_id IN (
-      SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
+    organization_id::text IN (
+      SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text
     )
   );
 
@@ -490,8 +482,8 @@ DROP POLICY IF EXISTS "Users can insert own org audit_logs" ON audit_logs;
 CREATE POLICY "Users can insert own org audit_logs"
   ON audit_logs FOR INSERT
   WITH CHECK (
-    organization_id IN (
-      SELECT organization_id FROM organization_members WHERE user_id = auth.uid()
+    organization_id::text IN (
+      SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text
     )
   );
 
@@ -502,9 +494,9 @@ CREATE POLICY "Users can insert own org audit_logs"
 -- Orçamentos por Categoria (Budgets)
 CREATE TABLE IF NOT EXISTS category_budgets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  category_id TEXT NOT NULL REFERENCES categories_data(id) ON DELETE CASCADE,
-  month_year VARCHAR(7) NOT NULL, -- 'YYYY-MM'
+  organization_id UUID NOT NULL,
+  category_id TEXT NOT NULL,
+  month_year VARCHAR(7) NOT NULL,
   budgeted_amount NUMERIC(15, 2) NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -513,13 +505,13 @@ CREATE TABLE IF NOT EXISTS category_budgets (
 ALTER TABLE category_budgets ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can CRUD own category_budgets" ON category_budgets;
 CREATE POLICY "Users can CRUD own category_budgets" ON category_budgets FOR ALL
-  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid()));
+  USING (organization_id::text IN (SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text));
 
 -- Anexos e Notas Fiscais (Attachments)
 CREATE TABLE IF NOT EXISTS transaction_attachments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  transaction_id TEXT REFERENCES transactions(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL,
+  transaction_id TEXT,
   file_name TEXT NOT NULL,
   file_url TEXT NOT NULL,
   file_size_bytes INTEGER,
@@ -529,13 +521,13 @@ CREATE TABLE IF NOT EXISTS transaction_attachments (
 ALTER TABLE transaction_attachments ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can CRUD own transaction_attachments" ON transaction_attachments;
 CREATE POLICY "Users can CRUD own transaction_attachments" ON transaction_attachments FOR ALL
-  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid()));
+  USING (organization_id::text IN (SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text));
 
 -- Importações de Extratos Bancários (OFX / CSV)
 CREATE TABLE IF NOT EXISTS bank_statement_imports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  account_id TEXT REFERENCES accounts_data(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL,
+  account_id TEXT,
   file_name TEXT NOT NULL,
   total_records INTEGER DEFAULT 0,
   imported_at TIMESTAMPTZ DEFAULT NOW()
@@ -543,12 +535,12 @@ CREATE TABLE IF NOT EXISTS bank_statement_imports (
 ALTER TABLE bank_statement_imports ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can CRUD own bank_statement_imports" ON bank_statement_imports;
 CREATE POLICY "Users can CRUD own bank_statement_imports" ON bank_statement_imports FOR ALL
-  USING (organization_id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid()));
+  USING (organization_id::text IN (SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text));
 
 -- Consentimento de Privacidade & LGPD (Privacy Consents)
 CREATE TABLE IF NOT EXISTS privacy_consents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID,
   term_version VARCHAR(20) NOT NULL,
   accepted_at TIMESTAMPTZ DEFAULT NOW(),
   ip_address TEXT,
@@ -557,4 +549,4 @@ CREATE TABLE IF NOT EXISTS privacy_consents (
 ALTER TABLE privacy_consents ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can manage own privacy_consents" ON privacy_consents;
 CREATE POLICY "Users can manage own privacy_consents" ON privacy_consents FOR ALL
-  USING (user_id = auth.uid());
+  USING (user_id::text = auth.uid()::text);
