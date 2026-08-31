@@ -81,15 +81,13 @@ const getStoredOrganization = (
     return demoOrg;
   }
 
-  // Real user default
-  const trialEnds = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  // Real user default (Starter Active)
   const defaultOrg: Organization = {
     id: orgId || (userId ? `org-${userId}` : 'org-prosper-main'),
     name: 'PROSPER Soluções Empresariais',
     tradeName: 'PROSPER',
-    plan: 'pro',
-    subscriptionStatus: 'trialing',
-    trialEndsAt: trialEnds,
+    plan: 'starter',
+    subscriptionStatus: 'active',
     createdAt: new Date().toISOString(),
   };
   localStorage.setItem(key, JSON.stringify(defaultOrg));

@@ -73,24 +73,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
   // Handle Trial Start
   const handleStartTrial = () => {
     updateSubscription('pro', 'trialing', 14);
-    showToast(
-      'Período de Testes Ativado! 🚀',
-      'Você tem 14 dias de acesso completo e irrestrito ao plano PROSPER PRO.',
-      'success'
-    );
     onClose();
   };
 
   // Handle Plan Subscription
   const handleSubscribePlan = (plan: 'starter' | 'pro' | 'business') => {
     updateSubscription(plan, 'active');
-    const planName = plan === 'starter' ? 'Starter' : plan === 'pro' ? 'Pro' : 'Business';
-    const cycleName = billingCycle === 'yearly' ? 'anual (-20% OFF)' : 'mensal';
-    showToast(
-      `Plano PROSPER ${planName} Ativado! 🚀`,
-      `Sua assinatura ${cycleName} do plano ${planName} foi atualizada com sucesso.`,
-      'success'
-    );
+    onClose();
   };
 
   return (
@@ -359,6 +348,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                   href={getStripeCheckoutUrl('starter')}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => handleSubscribePlan('starter')}
                   className={`w-full py-2.5 text-xs font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
                     selectedPlan === 'starter'
                       ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30'
@@ -494,6 +484,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                   href={getStripeCheckoutUrl('pro')}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => handleSubscribePlan('pro')}
                   className={`w-full py-2.5 text-xs font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
                     selectedPlan === 'pro'
                       ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30'
@@ -624,10 +615,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                   href={getStripeCheckoutUrl('business')}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => handleSubscribePlan('business')}
                   className={`w-full py-2.5 text-xs font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
                     selectedPlan === 'business'
-                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30'
-                      : 'bg-emerald-600/90 hover:bg-emerald-600 text-white shadow-md'
+                      ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30'
+                      : 'bg-blue-600/90 hover:bg-blue-600 text-white shadow-md'
                   }`}
                 >
                   <Building2 className="w-3.5 h-3.5 text-emerald-200" />
