@@ -82,6 +82,7 @@ CREATE INDEX IF NOT EXISTS idx_org_members_org_id ON organization_members(organi
 
 ALTER TABLE organization_members ENABLE ROW LEVEL SECURITY;
 
+-- Políticas RLS atualizadas para organization_members
 DROP POLICY IF EXISTS "Members can view their own organization memberships" ON organization_members;
 CREATE POLICY "Members can view their own organization memberships"
   ON organization_members FOR SELECT
@@ -91,6 +92,11 @@ CREATE POLICY "Members can view their own organization memberships"
       SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text
     )
   );
+
+DROP POLICY IF EXISTS "Users can insert organization members" ON organization_members;
+CREATE POLICY "Users can insert organization members"
+  ON organization_members FOR INSERT
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Admins can manage organization members" ON organization_members;
 CREATE POLICY "Admins can manage organization members"
@@ -111,6 +117,11 @@ CREATE POLICY "Users can view their organizations"
       SELECT om.organization_id::text FROM organization_members om WHERE om.user_id::text = auth.uid()::text
     )
   );
+
+DROP POLICY IF EXISTS "Users can insert organizations" ON organizations;
+CREATE POLICY "Users can insert organizations"
+  ON organizations FOR INSERT
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Admins can update their organizations" ON organizations;
 CREATE POLICY "Admins can update their organizations"

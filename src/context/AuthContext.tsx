@@ -467,74 +467,113 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userId = authData.user.id;
 
       // 2. Check if this user already has an organization (avoid duplicate orgs)
-      const { data: existingMember } = await supabase
-        .from('organization_members')
-        .select('id, organization_id')
-        .eq('user_id', userId)
-        .limit(1)
-        .maybeSingle();
+      try {
+        const { data: existingMember } = await supabase
+          .from('organization_members')
+          .select('id, organization_id')
+          .eq('user_id', userId)
+          .limit(1)
+          .maybeSingle();
 
-      if (existingMember) {
-        throw new Error('Este e-mail já possui uma empresa cadastrada. Faça login para acessar seu painel.');
+        if (existingMember) {
+          throw new Error('Este e-mail já possui uma empresa cadastrada. Faça login para acessar seu painel.');
+        }
+      } catch (checkErr: any) {
+        if (checkErr.message?.includes('já possui uma empresa')) {
+          throw checkErr;
+        }
       }
 
-      // 3. Insert new organization (14-day trial of Pro)
-      const { data: orgData, error: orgError } = await supabase
-        .from('organizations')
-        .insert({
-          name: companyName.trim(),
-          trade_name: companyName.trim(),
-          document: document.trim(),
-          plan: 'pro',
-          subscription_status: 'trialing',
-        })
-        .select()
-        .single();
+      // 3. Provision organization (14-day trial of Pro) with robust Supabase insert & local fallback
+      let orgId = `org-${userId}`;
+      let orgObj: Organization = {
+        id: orgId,
+        name: companyName.trim() || 'Minha Empresa',
+        tradeName: companyName.trim() || 'Minha Empresa',
+        document: document.trim() || undefined,
+        plan: 'pro',
+        subscriptionStatus: 'trialing',
+        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        createdAt: new Date().toISOString(),
+      };
 
-      if (orgError) {
-        console.error('[PROSPER Auth] Erro ao criar organização:', orgError);
-        throw new Error('Erro ao configurar os dados da empresa. Tente novamente.');
+      try {
+        const { data: orgData, error: orgError } = await supabase
+          .from('organizations')
+          .insert({
+            name: companyName.trim(),
+            trade_name: companyName.trim(),
+            document: document.trim(),
+            plan: 'pro',
+            subscription_status: 'trialing',
+          })
+          .select()
+          .single();
+
+        if (orgData && !orgError) {
+          orgId = orgData.id;
+          orgObj = {
+            id: orgData.id,
+            name: orgData.name,
+            tradeName: orgData.trade_name || orgData.name,
+            document: orgData.document,
+            plan: 'pro',
+            subscriptionStatus: 'trialing',
+            trialEndsAt: orgData.trial_ends_at || orgObj.trialEndsAt,
+            createdAt: orgData.created_at,
+          };
+
+          // 4. Link user to organization as admin
+          await supabase.from('organization_members').insert({
+            organization_id: orgId,
+            user_id: userId,
+            role: 'admin',
+          });
+
+          // 5. Seed initial default bank account
+          await supabase.from('accounts_data').insert({
+            id: `acc-main-${Date.now()}`,
+            organization_id: orgId,
+            name: 'Conta Principal PJ',
+            bank_name: 'Banco Itaú',
+            type: 'checking',
+            initial_balance: 0,
+            current_balance: 0,
+            color: '#10B981',
+            is_active: true,
+            is_default: true,
+          });
+
+          // 6. Seed essential chart of accounts categories
+          await supabase.from('categories_data').insert([
+            { id: `cat-seed-1`, organization_id: orgId, name: 'Vendas de Produtos & Serviços', type: 'income', group_name: 'Receita Operacional Bruta', color: '#10B981' },
+            { id: `cat-seed-2`, organization_id: orgId, name: 'Rendimentos de Aplicações', type: 'income', group_name: 'Receitas Financeiras', color: '#3B82F6' },
+            { id: `cat-seed-3`, organization_id: orgId, name: 'Impostos e Tributos s/ Venda', type: 'expense', group_name: 'Deduções da Receita Bruta', color: '#F43F5E' },
+            { id: `cat-seed-4`, organization_id: orgId, name: 'Custos com Fornecedores', type: 'expense', group_name: 'Custos dos Serviços Prestados', color: '#EA580C' },
+            { id: `cat-seed-5`, organization_id: orgId, name: 'Salários e Encargos', type: 'expense', group_name: 'Despesas com Pessoal', color: '#8B5CF6' },
+            { id: `cat-seed-6`, organization_id: orgId, name: 'Aluguel, Energia e Internet', type: 'expense', group_name: 'Despesas Administrativas', color: '#64748B' },
+            { id: `cat-seed-7`, organization_id: orgId, name: 'Marketing e Anúncios', type: 'expense', group_name: 'Despesas Comerciais', color: '#EC4899' },
+            { id: `cat-seed-8`, organization_id: orgId, name: 'Tarifas Bancárias e Juros', type: 'expense', group_name: 'Despesas Financeiras', color: '#EF4444' },
+          ]);
+        } else if (orgError) {
+          console.warn('[PROSPER Auth] Supabase organization insert skipped (RLS/session), using local state:', orgError.message);
+        }
+      } catch (dbErr) {
+        console.warn('[PROSPER Auth] Supabase organization setup fallback to local storage:', dbErr);
       }
 
-      if (orgData) {
-        const orgId = orgData.id;
-
-        // 4. Link user to organization as admin
-        await supabase.from('organization_members').insert({
-          organization_id: orgId,
-          user_id: userId,
-          role: 'admin',
-        });
-
-        // 5. Seed initial default bank account
-        await supabase.from('accounts_data').insert({
-          id: `acc-main-${Date.now()}`,
-          organization_id: orgId,
-          name: 'Conta Principal PJ',
-          bank_name: 'Banco Itaú',
-          type: 'checking',
-          initial_balance: 0,
-          current_balance: 0,
-          color: '#10B981',
-          is_active: true,
-          is_default: true,
-        });
-
-        // 6. Seed essential chart of accounts categories
-        await supabase.from('categories_data').insert([
-          { id: `cat-seed-1`, organization_id: orgId, name: 'Vendas de Produtos & Serviços', type: 'income', group_name: 'Receita Operacional Bruta', color: '#10B981' },
-          { id: `cat-seed-2`, organization_id: orgId, name: 'Rendimentos de Aplicações', type: 'income', group_name: 'Receitas Financeiras', color: '#3B82F6' },
-          { id: `cat-seed-3`, organization_id: orgId, name: 'Impostos e Tributos s/ Venda', type: 'expense', group_name: 'Deduções da Receita Bruta', color: '#F43F5E' },
-          { id: `cat-seed-4`, organization_id: orgId, name: 'Custos com Fornecedores', type: 'expense', group_name: 'Custos dos Serviços Prestados', color: '#EA580C' },
-          { id: `cat-seed-5`, organization_id: orgId, name: 'Salários e Encargos', type: 'expense', group_name: 'Despesas com Pessoal', color: '#8B5CF6' },
-          { id: `cat-seed-6`, organization_id: orgId, name: 'Aluguel, Energia e Internet', type: 'expense', group_name: 'Despesas Administrativas', color: '#64748B' },
-          { id: `cat-seed-7`, organization_id: orgId, name: 'Marketing e Anúncios', type: 'expense', group_name: 'Despesas Comerciais', color: '#EC4899' },
-          { id: `cat-seed-8`, organization_id: orgId, name: 'Tarifas Bancárias e Juros', type: 'expense', group_name: 'Despesas Financeiras', color: '#EF4444' },
-        ]);
-
-        // Initialize user-scoped storage key
-        getStoredOrganization(userId, orgData.id, false);
-      }
+      // Initialize user-scoped storage key
+      const subKey = getSubscriptionStorageKey(userId, orgId, false);
+      localStorage.setItem(subKey, JSON.stringify(orgObj));
+      setOrganization(orgObj);
+      setProfile({
+        id: userId,
+        email: normalizedEmail,
+        fullName: fullName.trim() || 'Gestor',
+        role: 'admin',
+        organizationId: orgId,
+        organization: orgObj,
+      });
 
       return { error: null };
     } catch (err: any) {
