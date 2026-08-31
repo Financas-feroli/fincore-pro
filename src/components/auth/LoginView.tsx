@@ -30,20 +30,27 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setResendStatus(null);
     setIsLoading(true);
 
     const { error } = await signIn(email, password);
 
     if (error) {
-      setErrorMessage(
-        error.message === 'Invalid login credentials'
-          ? 'E-mail ou senha incorretos. Verifique e tente novamente.'
-          : error.message
-      );
+      const errLower = (error.message || '').toLowerCase();
+      if (errLower.includes('email not confirmed')) {
+        setErrorMessage(
+          'E-mail pendente de confirmação no Supabase. Por favor, verifique sua caixa de entrada e spam, ou confirme o usuário manualmente no painel do Supabase.'
+        );
+      } else if (errLower.includes('invalid login credentials')) {
+        setErrorMessage('E-mail ou senha incorretos. Verifique e tente novamente.');
+      } else {
+        setErrorMessage(error.message || 'Erro ao realizar login. Tente novamente.');
+      }
       setIsLoading(false);
     }
   };
