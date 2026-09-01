@@ -23,7 +23,7 @@ interface PricingModalProps {
 }
 
 export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) => {
-  const { user, organization, updateSubscription } = useAuth();
+  const { user, organization, startFreeTrial } = useAuth();
   const { showToast } = useFinance();
 
   const currentPlan = organization?.plan || 'pro';
@@ -59,7 +59,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
   const getStripeCheckoutUrl = (planId: 'starter' | 'pro' | 'business') => {
     const links = storageService.getStripeLinks(billingCycle);
     const baseLink =
-      links[planId] || 'https://buy.stripe.com/test_bJefZg24ffKw8y7ffgdMI01';
+      links[planId];
 
     const params = new URLSearchParams();
     if (user?.email) params.append('prefilled_email', user.email);
@@ -70,15 +70,27 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
     return `${baseLink}${baseLink.includes('?') ? '&' : '?'}${queryStr}`;
   };
 
-  // Handle Trial Start
-  const handleStartTrial = () => {
-    updateSubscription('pro', 'trialing', 14);
+  // Handle Trial Start — única ação de billing que o cliente pode disparar
+  // diretamente (via RPC start_free_trial no banco), pois não envolve
+  // pagamento real.
+  const handleStartTrial = async () => {
+    try {
+      await startFreeTrial(14);
+    } catch (err) {
+      showToast('Não foi possível iniciar o teste grátis. Tente novamente.', 'error');
+      return;
+    }
     onClose();
   };
 
-  // Handle Plan Subscription
-  const handleSubscribePlan = (plan: 'starter' | 'pro' | 'business') => {
-    updateSubscription(plan, 'active');
+  // Handle Plan Subscription — NÃO ativa mais o plano no clique.
+  // Apenas leva o usuário ao checkout do Stripe; a ativação real do plano
+  // acontece de forma assíncrona quando a Edge Function stripe-webhook
+  // recebe a confirmação de pagamento (checkout.session.completed) e
+  // atualiza organizations no backend. A UI deve refletir isso reabrindo/
+  // atualizando os dados da organização (ex.: polling ou Supabase Realtime
+  // no retorno do checkout), não otimisticamente aqui.
+  const handleSubscribePlan = (_plan: 'starter' | 'pro' | 'business') => {
     onClose();
   };
 
