@@ -228,19 +228,19 @@ export const storageService = {
       console.warn('Error reading stripe links:', e);
     }
 
-    // Official Stripe Payment Links generated for PROSPER SaaS
+    // Official Stripe Payment Links generated for PROSPER SaaS (conta live "Feroli")
     if (cycle === 'yearly') {
       return {
-        starter: 'https://buy.stripe.com/test_5kQ00ieR10PC8y73wydMI04',
-        pro: 'https://buy.stripe.com/test_eVqfZg10baqccOnebcdMI06',
-        business: 'https://buy.stripe.com/test_6oU6oG7oz9m8g0z3wydMI08',
+        starter: 'https://buy.stripe.com/6oU6oAbT1d3n3I30A52Nq01',
+        pro: 'https://buy.stripe.com/28EdR2f5d8N70vR4Ql2Nq03',
+        business: 'https://buy.stripe.com/9B600c3mv6EZ2DZ2Id2Nq05',
       };
     }
 
     return {
-      starter: 'https://buy.stripe.com/test_7sYbJ0bEP2XK01B9UWdMI03',
-      pro: 'https://buy.stripe.com/test_9B64gy6kvbugg0z5EGdMI05',
-      business: 'https://buy.stripe.com/test_aFa9AS5grdCo9CbffgdMI07',
+      starter: 'https://buy.stripe.com/eVq5kwbT17J3fqL2Id2Nq00',
+      pro: 'https://buy.stripe.com/7sY8wI7CLgfza6raaF2Nq02',
+      business: 'https://buy.stripe.com/14AcMYbT13sNfqL82x2Nq04',
     };
   },
 
