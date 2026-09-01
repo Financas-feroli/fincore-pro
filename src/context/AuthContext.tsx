@@ -29,6 +29,7 @@ interface AuthContextType {
     status?: 'active' | 'trialing',
     trialDays?: number
   ) => void;
+  startFreeTrial: (trialDays?: number) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -159,6 +160,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         createdAt: prev?.createdAt || new Date().toISOString(),
       };
 
+      // IMPORTANTE: não escrevemos mais plan/subscription_status/trial_ends_at
+      // diretamente no Supabase a partir do cliente. Desde a migration
+      // 001_fix_security_rls.sql, essas colunas só podem ser alteradas:
+      //   a) pela Edge Function stripe-webhook (service_role), após pagamento
+      //      confirmado pelo Stripe, ou
+      //   b) pela RPC start_free_trial, para o caso específico de iniciar
+      //      o teste grátis (veja startFreeTrial abaixo).
+      // Uma tentativa de UPDATE direto aqui seria rejeitada pelo banco.
+      //
+      // Este helper agora serve só para refletir no estado local/UI algo que
+      // JÁ foi confirmado pelo backend (ex.: após loadUserData reler do
+      // Supabase). Não deve ser chamado para "fingir" que uma assinatura foi
+      // ativada.
       localStorage.setItem(key, JSON.stringify(updated));
 
       setProfile((prevProf) => {
@@ -169,47 +183,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       });
 
-      // Also update Supabase if connected to a real organization
-      if (
-        prev?.id &&
-        prev.id !== 'org-prosper-main' &&
-        prev.id !== 'org-default' &&
-        prev.id !== 'org-prosper-demo'
-      ) {
-        const updatePayload: Record<string, unknown> = {
-          plan,
-          subscription_status: status,
-        };
-        // Sync trial_ends_at to Supabase so it persists across devices
-        if (trialEndsAt) {
-          updatePayload.trial_ends_at = trialEndsAt;
-        }
-
-        supabase
-          .from('organizations')
-          .update(updatePayload)
-          .eq('id', prev.id)
-          .then(({ error }) => {
-            if (error) {
-              console.error('[PROSPER] Falha ao sincronizar plano com Supabase:', error.message);
-              // Retry once after 3 seconds for transient failures
-              setTimeout(() => {
-                supabase
-                  .from('organizations')
-                  .update(updatePayload)
-                  .eq('id', prev.id!)
-                  .then(({ error: retryError }) => {
-                    if (retryError) {
-                      console.error('[PROSPER] Retry falhou:', retryError.message);
-                    }
-                  });
-              }, 3000);
-            }
-          });
-      }
-
       return updated;
     });
+  };
+
+  // Inicia o período de teste grátis via RPC segura no banco (única escrita
+  // de billing permitida a partir do cliente — não envolve pagamento).
+  const startFreeTrial = async (trialDays: number = 14) => {
+    const { data, error } = await supabase.rpc('start_free_trial', {
+      trial_days: trialDays,
+    });
+
+    if (error) {
+      console.error('[PROSPER] Falha ao iniciar trial:', error.message);
+      throw error;
+    }
+
+    if (data) {
+      const orgObj: Organization = {
+        id: data.id,
+        name: data.name,
+        tradeName: data.trade_name || data.name,
+        document: data.document,
+        plan: data.plan,
+        subscriptionStatus: data.subscription_status,
+        trialEndsAt: data.trial_ends_at,
+        createdAt: data.created_at,
+      };
+      setOrganization(orgObj);
+      setProfile((prevProf) => (prevProf ? { ...prevProf, organization: orgObj } : prevProf));
+    }
   };
 
   // Fetch organization and member profile for a logged-in user
@@ -263,30 +266,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // Self-healing: If user is authenticated in Supabase but missing organization_members record, create it
+      // Self-healing: If user is authenticated in Supabase but missing organization_members record, create it.
+      // Usa a RPC create_organization_with_owner (SECURITY DEFINER) em vez de
+      // dois INSERTs soltos, garantindo atomicidade e respeitando a policy
+      // de organization_members que agora só permite user_id = auth.uid().
       if (currentUser.id) {
         const companyName = currentUser.user_metadata?.company_name || 'Minha Empresa';
         const document = currentUser.user_metadata?.document || '';
 
         const { data: newOrg } = await supabase
-          .from('organizations')
-          .insert({
-            name: companyName,
-            trade_name: companyName,
-            document: document,
-            plan: 'pro',
-            subscription_status: 'trialing',
+          .rpc('create_organization_with_owner', {
+            org_name: companyName,
+            org_trade_name: companyName,
+            org_document: document,
           })
-          .select()
           .single();
 
         if (newOrg) {
-          await supabase.from('organization_members').insert({
-            organization_id: newOrg.id,
-            user_id: currentUser.id,
-            role: 'admin',
-          });
-
           const orgObj: Organization = {
             id: newOrg.id,
             name: newOrg.name,
@@ -645,6 +641,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resetPassword,
         updatePassword,
         updateSubscription,
+        startFreeTrial,
       }}
     >
       {children}
